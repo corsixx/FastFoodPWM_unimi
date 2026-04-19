@@ -2,13 +2,14 @@ require('dotenv').config(); // Carica le variabili d'ambiente da .env
 const express = require('express'); // Framework per il server
 const mongoose = require('mongoose');   // ODM per MongoDB
 const cors = require('cors');   // Middleware per abilitare CORS
+const authRoutes = require('./routes/auth');   // Importa le rotte di autenticazione
 
 const app = express();  // Crea un'app Express
 
 // Middleware
 app.use(cors());    // Abilita CORS per tutte le rotte
 app.use(express.json());    // Middleware per parsare il corpo delle richieste in JSON
-
+app.use('/api/auth', authRoutes);   // Usa le rotte di autenticazione con il prefisso /api/auth
 // Rotta di prova (per vedere se funziona)
 app.get('/', (req, res) => {
     res.send("Il server del FastFood è online!");   // Risposta alla richiesta GET sulla root
@@ -23,5 +24,5 @@ mongoose.connect(process.env.MONGO_URI) // Connessione a MongoDB Atlas usando la
 const PORT = process.env.PORT || 5000;  // Porta su cui il server ascolterà, predefinita 5000 se non specificata nelle variabili d'ambiente
 app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));   // Avvia il server e stampa un messaggio di conferma
 // Importa le rotte di autenticazione e le usa con il prefisso /api/auth
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+
+;
