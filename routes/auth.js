@@ -1,0 +1,15 @@
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
+
+router.post('/register', async (req, res) => {
+    try {
+        const nuovoUtente = new User(req.body);
+        await nuovoUtente.save();
+        res.status(201).json({ messaggio: "Utente creato correttamente!" });
+    } catch (errore) {
+        res.status(400).json({ errore: "Errore durante la registrazione" });
+    }
+});
+
+module.exports = router;
