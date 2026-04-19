@@ -22,3 +22,6 @@ mongoose.connect(process.env.MONGO_URI) // Connessione a MongoDB Atlas usando la
 // Avvio
 const PORT = process.env.PORT || 5000;  // Porta su cui il server ascolterà, predefinita 5000 se non specificata nelle variabili d'ambiente
 app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));   // Avvia il server e stampa un messaggio di conferma
+// Importa le rotte di autenticazione e le usa con il prefisso /api/auth
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
