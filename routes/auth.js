@@ -5,6 +5,49 @@ const jwt = require('jsonwebtoken'); // Libreria per la creazione e verifica dei
 const User = require('../models/User'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
 
 // ============================================================================
+// DOCUMENTAZIONE SWAGGER: REGISTRAZIONE UTENTE
+// ============================================================================
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Registrazione di un nuovo utente nel sistema
+ *     description: Riceve i dati anagrafici e credenziali, cifra la password con bcrypt e crea un documento su MongoDB Atlas.
+ *     tags: [Autenticazione]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Mario Rossi
+ *               email:
+ *                 type: string
+ *                 example: mario@test.it
+ *               password:
+ *                 type: string
+ *                 example: PasswordSicura123
+ *               role:
+ *                 type: string
+ *                 description: Ruolo dell'utente (default 'customer')
+ *                 example: customer
+ *     responses:
+ *       201:
+ *         description: Utente creato con successo
+ *       400:
+ *         description: Campi obbligatori mancanti o email già registrata
+ *       500:
+ *         description: Errore interno del server
+ */
+
+// ============================================================================
 // ROTTA 1: REGISTRAZIONE UTENTE (POST /api/auth/register)
 // ============================================================================
 
@@ -52,6 +95,41 @@ router.post('/register', async (req, res) => {
             res.status(500).json({ message: 'Errore interno del server.', error: error.message });
         }
     });
+
+// ============================================================================
+// DOCUMENTAZIONE SWAGGER: LOGIN UTENTE
+// ============================================================================
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Autenticazione utente e rilascio Token JWT
+ *     description: Valida email e password cifrata; se corrette, genera un token JWT stateless valido per 24h.
+ *     tags: [Autenticazione]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: mario@test.it
+ *               password:
+ *                 type: string
+ *                 example: PasswordSicura123
+ *     responses:
+ *       200:
+ *         description: Login riuscito, restituisce il Bearer Token e i dettagli utente
+ *       400:
+ *         description: Credenziali non valide o campi mancanti
+ *       500:
+ *         description: Errore interno del server
+ */
 // ============================================================================
 // ROTTA 2: LOGIN UTENTE (POST /api/auth/login)
 // ============================================================================
