@@ -46,12 +46,19 @@ const swaggerOptions = {
       }
     }
   },
-  // Percorso dei file contenenti i commenti Swagger
-  apis: ['./routes/*.js'],
+  // Indichiamo direttamente il file per evitare bug di percorsi su Windows
+  apis: ['./routes/auth.js'],
 };
 
-const swaggerDocs = swaggerJsDoc(swaggerOptions); // Genera la documentazione Swagger a partire dai commenti nei file specificati
-// Endpoint dove visualizzare l'interfaccia grafica nel browser
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+
+// Endpoint JSON di test (per verificare la specifica generata)
+app.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerDocs);
+});
+
+// Endpoint interfaccia grafica Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // ==========================================
