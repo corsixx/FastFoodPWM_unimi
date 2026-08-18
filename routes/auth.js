@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs'); // Libreria per la cifratura a una via (hashing) delle password
 const jwt = require('jsonwebtoken'); // Libreria per la creazione e verifica dei JSON Web Token
-const User = require('../models/User'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
+const User = require('../models/user'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
 
 // ============================================================================
 // DOCUMENTAZIONE SWAGGER: REGISTRAZIONE UTENTE
@@ -90,7 +90,7 @@ router.post('/register', async (req, res) => {
             role: newUser.role
         }
         });
-        } catch (errore) {
+        } catch (error) {
             console.error('Errore registrazione:', error);
             res.status(500).json({ message: 'Errore interno del server.', error: error.message });
         }
