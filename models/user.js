@@ -1,10 +1,20 @@
-const mongoose = require('mongoose');   // Importa Mongoose per la gestione del database MongoDB
+const mongoose = require('mongoose'); // Importa Mongoose per interagire con MongoDB
 
-const userSchema = new mongoose.Schema({    // Definisce lo schema per gli utenti
-    nome: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    ruolo: { type: String, enum: ['cliente', 'ristoratore'], default: 'cliente' }
-}, { timestamps: true });   // Aggiunge campi createdAt e updatedAt automaticamente
+// Definisce la struttura e le regole per i documenti degli utenti
+const userSchema = new mongoose.Schema({
+    
+    name: { type: String, required: true }, // Nome obbligatorio (rinominato da "nome" a "name")
+    
+    email: { type: String, required: true, unique: true }, // Email obbligatoria e senza doppioni
+    
+    password: { type: String, required: true }, // Password obbligatoria (verrà salvata già cifrata)
+    
+    // Ruolo utente: accetta solo 'customer' o 'restaurant', di base è 'customer'
+    role: { type: String, enum: ['customer', 'restaurant'], default: 'customer' }
 
-module.exports = mongoose.model('User', userSchema, 'utente');    // Esporta il modello User basato sullo schema definito, permettendo di interagire con la collezione 'users' nel database MongoDB
+}, { 
+    timestamps: true // Aggiunge automaticamente i campi createdAt e updatedAt
+});
+
+// Esporta il modello User salvando i dati nella collezione chiamata 'utente'
+module.exports = mongoose.model('User', userSchema, 'utente');
