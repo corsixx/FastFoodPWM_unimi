@@ -1,3 +1,4 @@
+//autenticazione.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs'); // Libreria per la cifratura a una via (hashing) delle password
