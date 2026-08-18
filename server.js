@@ -1,28 +1,38 @@
-require('dotenv').config(); // Carica le variabili d'ambiente da .env
-const express = require('express'); // Framework per il server
-const mongoose = require('mongoose');   // ODM per MongoDB
-const cors = require('cors');   // Middleware per abilitare CORS
-const authRoutes = require('./routes/auth');   // Importa le rotte di autenticazione
+require('dotenv').config(); // Carica le variabili d'ambiente dal file .env
+const express = require('express'); // Framework web per creare server e gestire rotte HTTP
+const mongoose = require('mongoose'); // ODM (Object Data Modeling) per interagire con MongoDB
+const cors = require('cors'); // Middleware per abilitare le richieste Cross-Origin
 
-const app = express();  // Crea un'app Express
+// Importazione delle rotte
+const authRoutes = require('./routes/auth'); // Modulo contenente /register e /login
 
-// Middleware
-app.use(cors());    // Abilita CORS per tutte le rotte
-app.use(express.json());    // Middleware per parsare il corpo delle richieste in JSON
-app.use('/api/auth', authRoutes);   // Usa le rotte di autenticazione con il prefisso /api/auth
-// Rotta di prova (per vedere se funziona)
+const app = express(); // Inizializzazione dell'applicazione Express
+
+// ==========================================
+// MIDDLEWARE GLOBALI
+// ==========================================
+app.use(cors()); // Consente comunicazioni da domini esterni (es. frontend React/Vue o Swagger)
+app.use(express.json()); // Converte i payload JSON in entrata rendendoli disponibili in req.body
+
+// ==========================================
+// REGISTRAZIONE ROTTE
+// ==========================================
+app.use('/api/auth', authRoutes); // Monta tutte le rotte di autenticazione sotto il prefisso /api/auth
+
+// Rotta root per test di connettività base
 app.get('/', (req, res) => {
-    res.send("Il server del FastFood è online!");   // Risposta alla richiesta GET sulla root
+  res.send("Il server del FastFood è online!");
 });
 
-// Connessione al DB
-mongoose.connect(process.env.MONGO_URI) // Connessione a MongoDB Atlas usando la stringa di connessione dal file .env
-  .then(() => console.log("Connessione a MongoDB Atlas riuscita!")) // Messaggio di conferma se la connessione è riuscita
-  .catch(err => console.error("Errore di connessione:", err));  // Gestione degli errori di connessione
+// ==========================================
+// CONNESSIONE DATABASE (MongoDB Atlas)
+// ==========================================
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("Connessione a MongoDB Atlas riuscita!"))
+  .catch(err => console.error("Errore di connessione a MongoDB:", err));
 
-// Avvio
-const PORT = process.env.PORT || 5000;  // Porta su cui il server ascolterà, predefinita 5000 se non specificata nelle variabili d'ambiente
-app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));   // Avvia il server e stampa un messaggio di conferma
-// Importa le rotte di autenticazione e le usa con il prefisso /api/auth
-
-;
+// ==========================================
+// AVVIO DEL SERVER HTTP
+// ==========================================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));
