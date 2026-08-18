@@ -68,7 +68,7 @@ app.use('/api/auth', authRoutes); // Monta tutte le rotte di autenticazione sott
 
 // Rotta root per test di connettività base
 app.get('/', (req, res) => {
-  res.send("Il server del FastFood è online!");
+  res.send("Il server del FastFood è online TESDT!");
 });
 
 // ==========================================
