@@ -52,12 +52,6 @@ const swaggerOptions = {
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 
-// Endpoint JSON di test (per verificare la specifica generata)
-app.get('/swagger.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerDocs);
-});
-
 // Endpoint interfaccia grafica Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
@@ -68,7 +62,7 @@ app.use('/api/auth', authRoutes); // Monta tutte le rotte di autenticazione sott
 
 // Rotta root per test di connettività base
 app.get('/', (req, res) => {
-  res.send("Il server del FastFood è online TESDT!");
+  res.send("API Server del FastFood online.");
 });
 
 // ==========================================
