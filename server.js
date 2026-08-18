@@ -3,6 +3,10 @@ const express = require('express'); // Framework web per creare server e gestire
 const mongoose = require('mongoose'); // ODM (Object Data Modeling) per interagire con MongoDB
 const cors = require('cors'); // Middleware per abilitare le richieste Cross-Origin
 
+// Import librerie Swagger
+const swaggerUi = require('swagger-ui-express');  // Libreria per servire l'interfaccia grafica di Swagger
+const swaggerJsDoc = require('swagger-jsdoc');  // Libreria per generare la documentazione Swagger a partire dai commenti nel codice
+
 // Importazione delle rotte
 const authRoutes = require('./routes/auth'); // Modulo contenente /register e /login
 
@@ -13,6 +17,42 @@ const app = express(); // Inizializzazione dell'applicazione Express
 // ==========================================
 app.use(cors()); // Consente comunicazioni da domini esterni (es. frontend React/Vue o Swagger)
 app.use(express.json()); // Converte i payload JSON in entrata rendendoli disponibili in req.body
+
+// ==========================================
+// CONFIGURAZIONE SWAGGER (OpenAPI 3.0)
+// ==========================================
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'FastFood API Documentation',
+      version: '1.0.0',
+      description: 'Documentazione interattiva delle API per il sistema FastFood',
+    },
+    servers: [
+      {
+        url: 'http://localhost:5000',
+        description: 'Server locale di sviluppo',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer', // Tipo di autenticazione: Bearer Token
+          bearerFormat: 'JWT',  // Formato del token crittografico atteso
+          description: 'Inserisci il token JWT rilasciato dal login per autenticare le richieste'
+        }
+      }
+    }
+  },
+  // Percorso dei file contenenti i commenti Swagger
+  apis: ['./routes/*.js'],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions); // Genera la documentazione Swagger a partire dai commenti nei file specificati
+// Endpoint dove visualizzare l'interfaccia grafica nel browser
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // ==========================================
 // REGISTRAZIONE ROTTE
