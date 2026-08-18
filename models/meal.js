@@ -21,7 +21,7 @@ const mealSchema = new mongoose.Schema({
         default: null // Se null, appartiene al catalogo globale
     }
 }, { 
-    timestamps: true 
+    timestamps: true // Aggiunge automaticamente i campi createdAt e updatedAt
 });
 
 // Collezione 'meals' dentro il database fastfoodDB
