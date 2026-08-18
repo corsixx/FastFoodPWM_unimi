@@ -47,9 +47,57 @@ router.post('/register', async (req, res) => {
             role: newUser.role
         }
         });
+        } catch (errore) {
+            console.error('Errore registrazione:', error);
+            res.status(500).json({ message: 'Errore interno del server.', error: error.message });
+        }
+    });
+// ============================================================================
+// ROTTA 2: LOGIN UTENTE (POST /api/auth/login)
+// ============================================================================
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
 
-    } catch (errore) {
-        res.status(400).json({ errore: "Errore durante la registrazione" });
+        // 1. Controllo presenza credenziali
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Inserisci sia email che password.' });
+        }
+        // 2. Ricerca utente
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user) {
+            return res.status(400).json({ message: 'Credenziali non valide.' });    //se trova l'email, allora l'account esiste altrimenti ritorna un errore di credenziali non valide
+        }
+
+        // 3. Verifica hash password
+        const isMatch = await bcrypt.compare(password, user.password);  //bcrypt.compare confronta la password in chiaro con l'hash salvato nel database
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Credenziali non valide.' }); //verifica se la password inserita corrisponde all'hash salvato nel database. Se non corrisponde, ritorna un errore di credenziali non valide
+        }
+
+        // 4. Generazione Token JWT firmato
+        const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+        );
+
+        // 5. Risposta HTTP 200 OK con Token
+        res.status(200).json({
+        message: 'Autenticazione riuscita.',
+        token,
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }
+        });
+
+    } catch (error) {
+        console.error('Errore login:', error);
+        res.status(500).json({ message: 'Errore interno del server.', error: error.message });
     }
 });
 
