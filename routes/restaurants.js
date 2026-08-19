@@ -102,7 +102,7 @@ router.get('/:id/menu', async (req, res) => {
 // ******************************************************************************
 // 3. GESTIONE MENU: AGGIUNTA PIATTO DAL CATALOGO GENERALE
 // ******************************************************************************
-
+//il piatto deve esistere nel catalogo generale (dataset comune) per poter essere aggiunto al menu del ristorante
 /**
  * @swagger
  * /api/restaurants/menu/add-existing:
@@ -129,7 +129,7 @@ router.get('/:id/menu', async (req, res) => {
  *       403:
  *         description: Accesso negato (non sei un ristoratore)
  */
-router.post('/menu/add-existing', authMiddleware, async (req, res) => {
+router.post('/menu/add-existing', authMiddleware, async (req, res) => { // authMiddleware verifica il token JWT e popola req.user con i dati dell'utente autenticato
   try {
     // Controllo di autorizzazione basato sul ruolo estratto dal token JWT
     if (req.user.role !== 'restaurant') {
@@ -138,16 +138,16 @@ router.post('/menu/add-existing', authMiddleware, async (req, res) => {
 
     const { mealId } = req.body;
     const meal = await Meal.findById(mealId);
-    if (!meal) {
-      return res.status(404).json({ message: "Piatto non trovato nel catalogo comune." });
+    if (!meal) {    //se meal è vuoto, significa che l'id non corrisponde a nessun piatto nel catalogo comune
+      return res.status(404).json({ message: "Piatto non trovato nel catalogo comune." });  //ritorna errore 404 se il piatto non esiste e non viene aggiunto al menu del ristorante
     }
 
-    // $addToSet inserisce l'ID solo se non è già presente, prevenendo voci duplicate a menu
+    //
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { $addToSet: { restaurantMenu: mealId } },
-      { new: true }
-    ).select('-password');
+      { $addToSet: { restaurantMenu: mealId } },    // $addToSet inserisce l'ID solo se non è già presente, prevenendo voci duplicate a menu
+      { new: true } // restituisce il documento aggiornato dopo l'operazione di update
+    ).select('-password');  // esclude l'hash della password dai dati inviati al client
 
     res.status(200).json({ message: "Piatto aggiunto al menu!", menu: updatedUser.restaurantMenu });
   } catch (error) {
