@@ -40,4 +40,4 @@ const userSchema = new mongoose.Schema({
 });
 
 // Esporta il modello User salvando i dati nella collezione chiamata 'utente'
-module.exports = mongoose.model('User', userSchema, 'utente');
+module.exports = mongoose.models.User || mongoose.model('User', userSchema, 'utente');
