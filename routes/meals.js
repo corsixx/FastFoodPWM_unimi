@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/auth'); // Assicurati di averlo importato in cima al file
 const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
 
 /**
@@ -41,6 +42,9 @@ const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la c
  *       500:
  *         description: Errore del server
  */
+//*****************************************************************************
+// 1. RICERCA E CATALOGO PIATTI
+// *****************************************************************************
 router.get('/', async (req, res) => {
     try {
         const { name, category, area, maxPrice, ingredient } = req.query;
@@ -83,4 +87,168 @@ router.get('/', async (req, res) => {
     }
 });
 
+// ******************************************************************************
+// GESTIONE AMMINISTRATORE: CREAZIONE PIATTO GLOBALE
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/meals:
+ *   post:
+ *     summary: Inserisce un nuovo piatto nel catalogo globale (Solo Admin)
+ *     tags: [Piatti]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - strMeal
+ *               - strCategory
+ *               - price
+ *             properties:
+ *               strMeal:
+ *                 type: string
+ *               strCategory:
+ *                 type: string
+ *               strArea:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               measures:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               strMealThumb:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Piatto globale inserito con successo
+ *       403:
+ *         description: Operazione riservata agli amministratori
+ */
+router.post('/', authMiddleware, async (req, res) => {
+  try {
+    // Controllo di autorizzazione: solo l'admin può intervenire sul catalogo globale
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Accesso negato: operazione riservata all'amministratore." });
+    }
+
+    const newMeal = new Meal(req.body);
+    const savedMeal = await newMeal.save();
+
+    res.status(201).json({ message: "Piatto globale creato!", meal: savedMeal });
+  } catch (error) {
+    res.status(500).json({ message: "Errore durante la creazione del piatto.", error: error.message });
+  }
+});
+
+
+// ******************************************************************************
+// GESTIONE AMMINISTRATORE: MODIFICA PIATTO GLOBALE
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/meals/{id}:
+ *   put:
+ *     summary: Modifica qualsiasi piatto nel catalogo globale (Solo Admin)
+ *     tags: [Piatti]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID univoco del piatto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Piatto globale modificato con successo
+ *       403:
+ *         description: Operazione riservata agli amministratori
+ *       404:
+ *         description: Piatto non trovato
+ */
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Accesso negato: solo l'amministratore può modificare il catalogo globale." });
+    }
+
+    const updatedMeal = await Meal.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+
+    if (!updatedMeal) {
+      return res.status(404).json({ message: "Piatto non trovato nel catalogo." });
+    }
+
+    res.status(200).json({ message: "Piatto globale modificato!", meal: updatedMeal });
+  } catch (error) {
+    res.status(500).json({ message: "Errore nella modifica del piatto.", error: error.message });
+  }
+});
+
+
+// ******************************************************************************
+// GESTIONE AMMINISTRATORE: ELIMINAZIONE PIATTO GLOBALE
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/meals/{id}:
+ *   delete:
+ *     summary: Elimina un piatto dal catalogo globale (Solo Admin)
+ *     tags: [Piatti]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del piatto da cancellare
+ *     responses:
+ *       200:
+ *         description: Piatto eliminato dal catalogo
+ *       403:
+ *         description: Operazione riservata agli amministratori
+ *       404:
+ *         description: Piatto non trovato
+ */
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Accesso negato: solo l'amministratore può eliminare piatti globali." });
+    }
+
+    const deletedMeal = await Meal.findByIdAndDelete(req.params.id);
+
+    if (!deletedMeal) {
+      return res.status(404).json({ message: "Piatto non trovato." });
+    }
+
+    res.status(200).json({ message: "Piatto eliminato definitivamente dal catalogo." });
+  } catch (error) {
+    res.status(500).json({ message: "Errore durante l'eliminazione del piatto.", error: error.message });
+  }
+});
 module.exports = router;
