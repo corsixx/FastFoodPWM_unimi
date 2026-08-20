@@ -222,5 +222,61 @@ router.post('/menu/create-custom', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Errore durante la creazione del piatto.", error: error.message });
   }
 });
+// ******************************************************************************
+// 6. GESTIONE MENU: RIMOZIONE PIATTO DAL MENU (E DAL DB SE PERSONALIZZATO)
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/restaurants/menu/{mealId}:
+ *   delete:
+ *     summary: Rimuove un piatto dal menu del ristoratore (e lo elimina se era personalizzato)
+ *     tags: [Ristoranti]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: mealId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID univoco del piatto da rimuovere
+ *     responses:
+ *       200:
+ *         description: Piatto rimosso con successo
+ *       403:
+ *         description: Operazione consentita solo ai ristoratori
+ */
+router.delete('/menu/:mealId', authMiddleware, async (req, res) => {
+  try {
+    // Controllo di autorizzazione: solo chi ha ruolo 'restaurant' può gestire il listino
+    if (req.user.role !== 'restaurant') {
+      return res.status(403).json({ message: "Operazione consentita solo ai ristoratori." });
+    }
+
+    const { mealId } = req.params;
+
+    // 1. $pull rimuove il riferimento all'ID dal menu personale del ristoratore
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $pull: { restaurantMenu: mealId } },
+      { new: true }
+    ).select('-password');
+
+    // 2. Controllo integrità: se il piatto era una sua creazione privata, lo eliminiamo fisicamente dalla collezione meals
+    const meal = await Meal.findById(mealId);
+    if (meal && meal.restaurantId && meal.restaurantId.toString() === req.user.id) {
+      await Meal.findByIdAndDelete(mealId);
+    }
+
+    res.status(200).json({ 
+      message: "Piatto rimosso dal menu (ed eliminato dal catalogo se creato da te)!", 
+      menu: updatedUser.restaurantMenu 
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Errore durante la rimozione del piatto.", error: error.message });
+  }
+});
 
 module.exports = router;
