@@ -1,43 +1,75 @@
-const mongoose = require('mongoose'); // Importa Mongoose per interagire con MongoDB
+const mongoose = require('mongoose');
 
-// Definisce la struttura e le regole per i documenti degli utenti
 const userSchema = new mongoose.Schema({
-    
-    name: { type: String, required: true }, // Nome obbligatorio (rinominato da "nome" a "name")
-    
-    email: { type: String, required: true, unique: true }, // Email obbligatoria e senza doppioni
-    
-    password: { type: String, required: true }, // Password obbligatoria (verrà salvata già cifrata)
-    
-    // Ruolo utente: accetta solo 'customer' o 'restaurant', di base è 'customer'
-    role: { 
-        type: String, 
-        enum: ['customer', 'restaurant', 'admin'], 
-        default: 'customer' 
-    },
+  // **************************************************************************
+  // 1. DATI ACCOUNT GENERALI (PER TUTTI I RUOLI)
+  // **************************************************************************
+  name: { 
+    type: String, 
+    required: true 
+  },
+  surname: { 
+    type: String, 
+    default: '' 
+  },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true 
+  },
+  password: { 
+    type: String, 
+    required: true 
+  },
+  role: { 
+    type: String, 
+    enum: ['customer', 'restaurant', 'admin'], 
+    default: 'customer' 
+  },
 
-    //dati specifici per il ristoratore (quindi opzionali anche per i clienti)
-    restaurantName: { type: String }, // Nome del ristorante 
+  // **************************************************************************
+  // 2. DATI SPECIFICI PER IL CLIENTE (Preferenze e Pagamento)
+  // **************************************************************************
+  // Preferenza culinaria per offerte personalizzate in bacheca (es. 'Pasta', 'Beef', 'Vegetarian')
+  favoriteCategory: { 
+    type: String, 
+    default: null 
+  },
+  // Metodo di pagamento associato di default all'account
+  paymentMethod: { 
+    type: String, 
+    enum: ['carta_credito', 'carta_prepagata', 'contanti'], 
+    default: 'carta_credito' 
+  },
 
-    restaurantAddress: { type: String }, // Indirizzo del ristorante 
+  // **************************************************************************
+  // 3. DATI SPECIFICI PER IL RISTORATORE
+  // **************************************************************************
+  restaurantName: { 
+    type: String 
+  },
+  restaurantAddress: { 
+    type: String 
+  },
+  restaurantPhone: { 
+    type: String 
+  },
+  IVAnumber: { 
+    type: String 
+  },
+  // Array di ID piatti presenti nel listino del ristorante
+  restaurantMenu: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Meal' 
+  }],
 
-    restaurantPhone: { type: String }, // Numero di telefono del ristorante 
-
-    IVAnumber: { type: String }, // Partita IVA del ristorante
-
-    //menù del risorante (array di riferimenti ai piatti)
-    restaurantMenu: [{ 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Meal' 
-    }],
-
-    //dati specifici per il cliente
-    paymentMethods: { type: String , default: 'carta' }, // Metodi di pagamento preferiti del cliente
-
-    customerPreferences: [{ type: String }], // Preferenze del cliente
-}, {
-    timestamps: true // Aggiunge automaticamente i campi createdAt e updatedAt
+  // **************************************************************************
+  // 4. METADATI
+  // **************************************************************************
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
-// Esporta il modello User salvando i dati nella collezione chiamata 'utente'
-module.exports = mongoose.models.User || mongoose.model('User', userSchema, 'utente');  // Esporta il modello User se esiste già, altrimenti lo compila
+module.exports = mongoose.models.User || mongoose.model('User', userSchema, 'utente');
