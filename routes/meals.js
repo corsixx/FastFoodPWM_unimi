@@ -306,4 +306,28 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Errore durante l'eliminazione del piatto.", error: error.message });
   }
 });
+
+// ============================================================================
+// RECUPERO CATEGORIE UNICHE DAL DATABASE
+// ============================================================================
+/**
+ * @swagger
+ * /api/meals/categories:
+ *   get:
+ *     summary: Recupera l'elenco di tutte le categorie uniche presenti a catalogo
+ *     tags: [Piatti]
+ *     responses:
+ *       200:
+ *         description: Array di stringhe con i nomi delle categorie
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    // distinct restituisce tutti i valori univoci del campo strCategory escludendo i null/vuoti
+    const categories = await Meal.distinct('strCategory');
+    const validCategories = categories.filter(cat => cat && cat.trim() !== '');
+    res.status(200).json(validCategories);
+  } catch (error) {
+    res.status(500).json({ message: "Errore nel recupero delle categorie", error: error.message });
+  }
+});
 module.exports = router;
