@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FASTFOOD // STREET DELIVERY</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- CSS Personalizzato -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container">
+      <a class="navbar-brand brand-font" href="index.html">FAST<span>FOOD</span>.</a>
+      
+      <button class="navbar-toggler navbar-dark" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link active text-light" href="index.html">Menu</a></li>
+        </ul>
+        <ul class="navbar-nav" id="auth-nav-items">
+          <!-- Popolato dinamicamente da api.js -->
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <header class="hero-section">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-7">
+          <span class="badge badge-custom mb-3">MILANO // STREET TASTE</span>
+          <h1 class="display-4 text-uppercase mb-3">Ordina i piatti migliori in pochi minuti.</h1>
+          <p class="text-muted lead mb-4">Seleziona i tuoi piatti preferiti, invia la comanda e ritira al bancone senza attese inutili.</p>
+          
+          <!-- BARRA DI RICERCA -->
+          <div class="row g-2">
+            <div class="col-md-7">
+              <input type="text" id="search-input" class="form-control form-control-dark bg-dark text-white border-secondary" placeholder="Cerca piatto (es. Burger, Pasta, Pizza)...">
+            </div>
+            <div class="col-md-5 d-flex gap-2">
+              <select id="category-filter" class="form-select bg-dark text-white border-secondary">
+                <option value="">Tutte le Categorie</option>
+                <option value="Beef">Beef / Burger</option>
+                <option value="Pasta">Pasta</option>
+                <option value="Vegetarian">Vegetarian</option>
+                <option value="Dessert">Dessert</option>
+              </select>
+              <button class="btn btn-accent" onclick="searchMeals()">Cerca</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENUTO PRINCIPALE -->
+  <main class="container my-5">
+
+    <!-- SEZIONE BACHECA OFFERTE (Visibile se l'utente è cliente) -->
+    <section id="recommendations-section" class="mb-5 d-none">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <span class="badge badge-custom mb-1">CONSIGLIATI PER TE</span>
+          <h3 class="text-uppercase m-0">In Bacheca per le tue Preferenze</h3>
+        </div>
+      </div>
+      <div class="row g-4" id="recommendations-container">
+        <!-- Card generate via JS -->
+      </div>
+      <hr class="border-secondary my-5">
+    </section>
+
+    <!-- SEZIONE TUTTI I PIATTI -->
+    <section>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-uppercase m-0">Esplora il Menu Completo</h3>
+        <span class="text-muted" id="meals-count">Caricamento piatti...</span>
+      </div>
+      
+      <div class="row g-4" id="meals-container">
+        <!-- Card piatti popolate via JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- Script Applicativi -->
+  <script src="js/api.js"></script>
+  <script src="js/meals.js"></script>
+</body>
+</html>
