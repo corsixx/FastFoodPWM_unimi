@@ -1,6 +1,7 @@
 // public/js/app.js
 
 let currentCategory = '';
+let currentSearch = '';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,15 +9,33 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCatalog();
   loadRecommendations();
   renderDrawerAuth();
+  setupHorizontalWheelScroll();
 });
 
-// 1. CARICAMENTO DEL CATALOGO PIATTI
-async function loadCatalog(searchQuery = '') {
+/**
+ * 1. SCORRIMENTO ORIZZONTALE DELLA BARRA CON LA ROTELLA DEL MOUSE
+ */
+function setupHorizontalWheelScroll() {
+  const scrollNav = document.getElementById('categories-nav');
+  if (scrollNav) {
+    scrollNav.addEventListener('wheel', (evt) => {
+      evt.preventDefault();
+      scrollNav.scrollLeft += evt.deltaY;
+    }, { passive: false });
+  }
+}
+
+/**
+ * 2. CARICAMENTO CATALOGO PIATTI
+ */
+async function loadCatalog() {
   const grid = document.getElementById('meals-grid');
+  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">CARICAMENTO IN CORSO...</div>`;
+
   try {
     let url = '/meals';
     const params = new URLSearchParams();
-    if (searchQuery) params.append('name', searchQuery);
+    if (currentSearch) params.append('name', currentSearch);
     if (currentCategory) params.append('category', currentCategory);
 
     if (params.toString()) url += `?${params.toString()}`;
@@ -24,7 +43,7 @@ async function loadCatalog(searchQuery = '') {
     const meals = await apiRequest(url);
 
     if (!meals || meals.length === 0) {
-      grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">NESSUN PIATTO TROVATO IN QUESTA CATEGORIA.</div>`;
+      grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">NESSUN PRODOTTO PRESENTE PER QUESTA SELEZIONE.</div>`;
       return;
     }
 
@@ -33,7 +52,7 @@ async function loadCatalog(searchQuery = '') {
         <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
           <div class="product-img-wrapper">
             <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=Fastfood'}" alt="${m.strMeal}" loading="lazy">
-            <span class="product-tag">${m.strCategory}</span>
+            <span class="product-tag">${m.strCategory || 'PIATTO'}</span>
           </div>
           <div class="product-title">${m.strMeal}</div>
           <div class="product-price">€ ${m.price.toFixed(2)} &bull; <span class="small">${m.preparationTime || 10}m prep</span></div>
@@ -42,11 +61,13 @@ async function loadCatalog(searchQuery = '') {
     `).join('');
 
   } catch (error) {
-    grid.innerHTML = `<div class="col-12 text-danger">Errore di connessione al database piatti.</div>`;
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore di connessione al database piatti.</div>`;
   }
 }
 
-// 2. CARICAMENTO BACHECA PERSONALIZZATA
+/**
+ * 3. CARICAMENTO BACHECA RACCOMANDAZIONI
+ */
 async function loadRecommendations() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
@@ -56,7 +77,7 @@ async function loadRecommendations() {
     const data = await apiRequest('/meals/recommendations');
     if (data.recommendations && data.recommendations.length > 0) {
       document.getElementById('recommendations-wrapper').classList.remove('d-none');
-      document.getElementById('user-pref-label').textContent = `Categoria: ${data.favoriteCategory || 'Consigliati'}`;
+      document.getElementById('user-pref-label').textContent = `Preferenza: ${data.favoriteCategory || 'In evidenza'}`;
       
       const container = document.getElementById('recommendations-container');
       container.innerHTML = data.recommendations.slice(0, 4).map(m => `
@@ -73,11 +94,41 @@ async function loadRecommendations() {
       `).join('');
     }
   } catch (e) {
-    // Silenzioso se l'utente non ha preferenze
+    // Silenzioso se l'utente non ha preferenze impostate
   }
 }
 
-// 3. GESTIONE CARRELLO
+/**
+ * 4. FILTRI, RICERCA E STATO ATTIVO
+ */
+function filterCategory(categoryName, btnElement) {
+  currentCategory = categoryName;
+
+  // Rimuove e assegna la classe .active al bottone cliccato
+  document.querySelectorAll('.nav-category-link').forEach(el => el.classList.remove('active'));
+  if (btnElement) {
+    btnElement.classList.add('active');
+  }
+
+  loadCatalog();
+}
+
+function handleSearch(value) {
+  currentSearch = value.trim();
+  loadCatalog();
+}
+
+function focusSearch() {
+  const searchInput = document.getElementById('search-box');
+  if (searchInput) {
+    searchInput.focus();
+    searchInput.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+/**
+ * 5. CARRELLO E BADGE
+ */
 function addToCart(mealId, name, price) {
   const existing = cart.find(item => item.mealId === mealId);
   if (existing) {
@@ -87,36 +138,21 @@ function addToCart(mealId, name, price) {
   }
   localStorage.setItem('cart', JSON.stringify(cart));
   renderCartBadge();
-  
-  // Feedback discreto
+
   const badge = document.getElementById('cart-badge');
   badge.classList.add('bg-warning', 'text-dark');
   setTimeout(() => badge.classList.remove('bg-warning', 'text-dark'), 300);
 }
 
 function renderCartBadge() {
-  const count = cart.reduce((acc, i) => acc + i.quantity, 0);
+  const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
   const badge = document.getElementById('cart-badge');
-  if (badge) badge.textContent = count;
+  if (badge) badge.textContent = totalItems;
 }
 
-// 4. FILTRI E RICERCA
-function filterCategory(cat) {
-  currentCategory = cat;
-  document.querySelectorAll('.nav-category-link').forEach(el => el.classList.remove('active'));
-  event.target.classList.add('active');
-  loadCatalog();
-}
-
-function handleSearch(val) {
-  loadCatalog(val.trim());
-}
-
-function focusSearch() {
-  document.getElementById('search-box').focus();
-}
-
-// 5. DRAWER STATO UTENTE
+/**
+ * 6. GESTIONE AUTENTICAZIONE NEL DRAWER
+ */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
@@ -124,13 +160,15 @@ function renderDrawerAuth() {
   const drawerSec = document.getElementById('drawer-user-section');
 
   if (role === 'restaurant') {
-    document.getElementById('drawer-stats-link').classList.remove('d-none');
-    document.getElementById('drawer-orders-link').textContent = 'GESTIONALE COMANDE';
+    const statsLink = document.getElementById('drawer-stats-link');
+    const ordersLink = document.getElementById('drawer-orders-link');
+    if (statsLink) statsLink.classList.remove('d-none');
+    if (ordersLink) ordersLink.textContent = 'GESTIONALE COMANDE';
   }
 
   if (token) {
     drawerSec.innerHTML = `
-      <div class="small text-muted mb-2">AUTENTICATO COME:</div>
+      <div class="small text-muted mb-1">ACCESSO EFFETTUATO COME:</div>
       <div class="fw-bold text-uppercase mb-3">${name || 'Utente'} (${role})</div>
       <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">LOGOUT</button>
     `;

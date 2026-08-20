@@ -2,13 +2,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
 
 :root {
-  --ff-yellow: #f0db4f; /* La topbar gialla 5mc2 */
+  --ff-yellow: #f0db4f;
   --ff-black: #000000;
   --ff-white: #ffffff;
-  --ff-gray-bg: #f8f8f8;
-  --ff-gray-light: #e5e5e5;
+  --ff-gray-bg: #f5f5f5;
   --ff-gray-text: #707070;
-  --ff-border: #e0e0e0;
+  --ff-border: #e8e8e8;
 }
 
 * {
@@ -22,9 +21,10 @@ body {
   color: var(--ff-black);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
-/* 1. TOP ANNOUNCEMENT BAR */
+/* TOP ANNOUNCEMENT BAR */
 .top-bar {
   background-color: var(--ff-yellow);
   color: var(--ff-black);
@@ -35,13 +35,13 @@ body {
   padding: 0.35rem 0;
 }
 
-/* 2. HEADER & LOGO */
+/* HEADER FISSO */
 .main-header {
   background-color: var(--ff-white);
-  border-bottom: 1px solid var(--ff-border);
   position: sticky;
   top: 0;
   z-index: 1020;
+  border-bottom: 1px solid var(--ff-border);
 }
 
 .brand-logo {
@@ -57,22 +57,6 @@ body {
   vertical-align: super;
 }
 
-/* NAV LINKS IN MAIUSCOLETTO */
-.nav-category-link {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--ff-black);
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.25rem 0.6rem;
-  transition: opacity 0.2s;
-}
-
-.nav-category-link:hover, .nav-category-link.active {
-  opacity: 0.5;
-}
-
 .header-tools-link {
   font-size: 0.75rem;
   font-weight: 600;
@@ -82,14 +66,65 @@ body {
   display: flex;
   align-items: center;
   gap: 0.3rem;
+  cursor: pointer;
 }
 
-/* 3. HERO / LOOKBOOK MULTI-PANEL */
+/* BARRA CATEGORIE SCROLLABILE (SENZA SEPARATORI) */
+.categories-bar-wrapper {
+  background-color: var(--ff-white);
+  width: 100%;
+  border-top: 1px solid var(--ff-border);
+}
+
+.categories-scroll-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.categories-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-category-link {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ff-black);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease-in-out;
+  border-radius: 0;
+}
+
+.nav-category-link:hover {
+  opacity: 0.5;
+}
+
+.nav-category-link.active {
+  background-color: var(--ff-black);
+  color: var(--ff-white);
+}
+
+/* HERO LOOKBOOK */
 .hero-lookbook {
   display: flex;
   width: 100%;
-  height: 65vh;
-  min-height: 480px;
+  height: 60vh;
+  min-height: 420px;
   overflow: hidden;
   background-color: #d8cbba;
   border-bottom: 1px solid var(--ff-border);
@@ -99,7 +134,7 @@ body {
   flex: 1;
   position: relative;
   overflow: hidden;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .lookbook-panel:last-child {
@@ -124,7 +159,7 @@ body {
   transform: translate(-50%, -50%);
   text-align: center;
   color: #fff;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
   pointer-events: none;
 }
 
@@ -136,12 +171,12 @@ body {
   margin: 0;
 }
 
-/* 4. PRODUCT CARDS (STILE MINIMALISTA) */
+/* PRODUCT CARD STILE 5MC2 */
 .product-card {
   border: none;
   background: transparent;
-  transition: opacity 0.2s;
   cursor: pointer;
+  text-align: left;
 }
 
 .product-img-wrapper {
@@ -149,7 +184,7 @@ body {
   background-color: var(--ff-gray-bg);
   aspect-ratio: 3/4;
   overflow: hidden;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
 }
 
 .product-img-wrapper img {
@@ -185,9 +220,9 @@ body {
   color: var(--ff-gray-text);
 }
 
-/* 5. OFFCANVAS / DRAWER LATERALE */
+/* OFFCANVAS / DRAWER */
 .offcanvas-5mc2 {
-  width: 380px !important;
+  width: 360px !important;
   border-left: 1px solid var(--ff-border);
 }
 
@@ -218,6 +253,6 @@ body {
 }
 
 .btn-black:hover {
-  background-color: #333;
+  background-color: #222;
   color: #fff;
 }
