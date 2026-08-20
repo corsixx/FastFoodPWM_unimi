@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User'); // Modello Mongoose per interrogare la collezione 'users'
 const authMiddleware = require('../middleware/auth'); // Assicurati di averlo importato in cima al file
 const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
 
@@ -43,7 +44,7 @@ const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la c
  *         description: Errore del server
  */
 //*****************************************************************************
-// 1. RICERCA E CATALOGO PIATTI
+// RICERCA E CATALOGO PIATTI
 // *****************************************************************************
 router.get('/', async (req, res) => {
     try {
@@ -85,6 +86,60 @@ router.get('/', async (req, res) => {
             error: error.message 
         });
     }
+});
+
+// ******************************************************************************
+// BACHECA: PIATTI CONSIGLIATI / OFFERTE IN BASE ALLE PREFERENZE (SOLO CLIENTI)
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/meals/recommendations:
+ *   get:
+ *     summary: Recupera i piatti consigliati per la bacheca in base alla categoria preferita
+ *     description: Legge la preferenza (favoriteCategory) impostata nel profilo del cliente autenticato e restituisce i piatti corrispondenti.
+ *     tags: [Piatti]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista dei piatti raccomandati recuperata con successo
+ *       400:
+ *         description: L'utente non ha ancora impostato una categoria preferita
+ *       403:
+ *         description: Accesso riservato ai clienti registrati
+ */
+router.get('/recommendations', authMiddleware, async (req, res) => {
+  try {
+    // 1. Controllo ruolo: solo i clienti hanno preferenze personalizzate per la bacheca
+    if (req.user.role !== 'customer') {
+      return res.status(403).json({ message: "La bacheca personalizzata è riservata ai clienti." });
+    }
+
+    // 2. Recuperiamo il profilo dell'utente loggato per leggere la sua preferenza
+    const user = await User.findById(req.user.id);
+    if (!user || !user.favoriteCategory) {
+      return res.status(200).json({ 
+        message: "Nessuna preferenza impostata. Ecco alcuni piatti casuali in evidenza.",
+        recommendations: await Meal.find().limit(6)
+      });
+    }
+
+    // 3. Cerchiamo i piatti che appartengono alla sua categoria preferita (es. 'Pasta', 'Beef', 'Vegetarian')
+    // Usiamo una RegExp case-insensitive ('i') così trova corrispondenze anche con maiuscole/minuscole diverse
+    const recommendedMeals = await Meal.find({
+      strCategory: new RegExp(`^${user.favoriteCategory}$`, 'i')
+    }).limit(10);
+
+    res.status(200).json({
+      favoriteCategory: user.favoriteCategory,
+      count: recommendedMeals.length,
+      recommendations: recommendedMeals
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Errore nel recupero dei piatti consigliati.", error: error.message });
+  }
 });
 
 // ******************************************************************************
