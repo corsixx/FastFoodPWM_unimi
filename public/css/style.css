@@ -1,106 +1,223 @@
 /* public/css/style.css */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
 
 :root {
-  --bg-dark: #0f1115;
-  --bg-card: #181b20;
-  --accent-color: #ff3e3e;
-  --accent-hover: #e03232;
-  --text-main: #ffffff;
-  --text-muted: #9ba1a6;
-  --border-subtle: #2d3239;
+  --ff-yellow: #f0db4f; /* La topbar gialla 5mc2 */
+  --ff-black: #000000;
+  --ff-white: #ffffff;
+  --ff-gray-bg: #f8f8f8;
+  --ff-gray-light: #e5e5e5;
+  --ff-gray-text: #707070;
+  --ff-border: #e0e0e0;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 body {
-  background-color: var(--bg-dark);
-  color: var(--text-main);
-  font-family: 'Inter', sans-serif;
-  min-height: 100vh;
+  background-color: var(--ff-white);
+  color: var(--ff-black);
+  margin: 0;
+  padding: 0;
 }
 
-h1, h2, h3, h4, h5, .brand-font {
-  font-family: 'Space Grotesk', sans-serif;
-  letter-spacing: -0.02em;
+/* 1. TOP ANNOUNCEMENT BAR */
+.top-bar {
+  background-color: var(--ff-yellow);
+  color: var(--ff-black);
+  font-size: 0.75rem;
   font-weight: 700;
-}
-
-/* NAVBAR MODERNA */
-.navbar-custom {
-  background-color: rgba(15, 17, 21, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.navbar-brand {
-  font-size: 1.5rem;
-  color: var(--text-main) !important;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.35rem 0;
+}
+
+/* 2. HEADER & LOGO */
+.main-header {
+  background-color: var(--ff-white);
+  border-bottom: 1px solid var(--ff-border);
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+}
+
+.brand-logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ff-black);
+  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+
+.brand-logo span {
+  font-size: 0.8rem;
+  vertical-align: super;
+}
+
+/* NAV LINKS IN MAIUSCOLETTO */
+.nav-category-link {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ff-black);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+  transition: opacity 0.2s;
+}
+
+.nav-category-link:hover, .nav-category-link.active {
+  opacity: 0.5;
+}
+
+.header-tools-link {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ff-black);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* 3. HERO / LOOKBOOK MULTI-PANEL */
+.hero-lookbook {
+  display: flex;
+  width: 100%;
+  height: 65vh;
+  min-height: 480px;
+  overflow: hidden;
+  background-color: #d8cbba;
+  border-bottom: 1px solid var(--ff-border);
+}
+
+.lookbook-panel {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.lookbook-panel:last-child {
+  border-right: none;
+}
+
+.lookbook-panel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lookbook-panel:hover img {
+  transform: scale(1.03);
+}
+
+.lookbook-overlay-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+.lookbook-overlay-text h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+/* 4. PRODUCT CARDS (STILE MINIMALISTA) */
+.product-card {
+  border: none;
+  background: transparent;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.product-img-wrapper {
+  position: relative;
+  background-color: var(--ff-gray-bg);
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+
+.product-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: var(--ff-black);
+  color: var(--ff-white);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
   letter-spacing: 0.05em;
 }
 
-.navbar-brand span {
-  color: var(--accent-color);
-}
-
-/* CARD DEI PIATTI & RISTORANTI */
-.card-custom {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-.card-custom:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent-color);
-}
-
-.card-custom img {
-  height: 200px;
-  object-fit: cover;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-/* BADGE E BOTTONI */
-.badge-custom {
-  background-color: #262a30;
-  color: #fff;
-  border: 1px solid var(--border-subtle);
+.product-title {
+  font-size: 0.85rem;
   font-weight: 600;
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+  color: var(--ff-black);
 }
 
-.btn-accent {
-  background-color: var(--accent-color);
-  color: #fff;
+.product-price {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--ff-gray-text);
+}
+
+/* 5. OFFCANVAS / DRAWER LATERALE */
+.offcanvas-5mc2 {
+  width: 380px !important;
+  border-left: 1px solid var(--ff-border);
+}
+
+.drawer-nav-item {
+  border-bottom: 1px solid var(--ff-border);
+  padding: 1rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--ff-black);
+  text-decoration: none;
+}
+
+.btn-black {
+  background-color: var(--ff-black);
+  color: var(--ff-white);
   border: none;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: 0.5rem 1.2rem;
-  transition: background 0.2s ease;
+  border-radius: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  padding: 0.8rem 1.2rem;
+  width: 100%;
 }
 
-.btn-accent:hover {
-  background-color: var(--accent-hover);
+.btn-black:hover {
+  background-color: #333;
   color: #fff;
-}
-
-.btn-outline-custom {
-  border: 1px solid var(--border-subtle);
-  color: #fff;
-  border-radius: 8px;
-}
-
-.btn-outline-custom:hover {
-  background-color: var(--border-subtle);
-  color: #fff;
-}
-
-/* HERO SECTION */
-.hero-section {
-  padding: 4rem 0 3rem 0;
-  border-bottom: 1px solid var(--border-subtle);
-  background: radial-gradient(circle at 80% 20%, rgba(255, 62, 62, 0.08) 0%, rgba(15, 17, 21, 0) 60%);
 }
