@@ -4,6 +4,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs'); // Libreria per la cifratura a una via (hashing) delle password
 const jwt = require('jsonwebtoken'); // Libreria per la creazione e verifica dei JSON Web Token
 const User = require('../models/user'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
+const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
+const authMiddleware = require('../middleware/auth'); // Middleware per proteggere le rotte e verificare il token JWT
 
 // ============================================================================
 // DOCUMENTAZIONE SWAGGER: REGISTRAZIONE UTENTE
@@ -178,6 +180,155 @@ router.post('/login', async (req, res) => {
         console.error('Errore login:', error);
         res.status(500).json({ message: 'Errore interno del server.', error: error.message });
     }
+});
+// ******************************************************************************
+// 3. RECUPERO DATI DEL PROPRIO PROFILO
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Recupera le informazioni complete dell'utente loggato
+ *     tags: [Autenticazione]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dati del profilo recuperati con successo
+ *       404:
+ *         description: Utente non trovato
+ */
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    // req.user.id arriva decodificato direttamente da authMiddleware
+    // select('-password') evita di trasmettere l'hash di sicurezza al client
+    const user = await User.findById(req.user.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: "Utente non trovato." });
+    }
+
+    res.status(200).json(user);
+
+  } catch (error) {
+    res.status(500).json({ message: "Errore nel recupero dei dati del profilo.", error: error.message });
+  }
+});
+
+
+// ******************************************************************************
+// 4. MODIFICA DATI ANAGRAFICI DEL PROFILO
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   put:
+ *     summary: Aggiorna i dati personali o del locale dell'utente autenticato
+ *     tags: [Autenticazione]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               restaurantName:
+ *                 type: string
+ *               restaurantAddress:
+ *                 type: string
+ *               restaurantPhone:
+ *                 type: string
+ *               IVAnumber:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profilo aggiornato con successo
+ *       404:
+ *         description: Utente non trovato
+ */
+router.put('/me', authMiddleware, async (req, res) => {
+  try {
+    const { 
+      name, 
+      restaurantName, 
+      restaurantAddress, 
+      restaurantPhone, 
+      IVAnumber 
+    } = req.body;
+
+    // $set aggiorna solo i campi anagrafici inviati, lasciando inalterati role ed email per sicurezza
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { 
+        $set: { 
+          name, 
+          restaurantName, 
+          restaurantAddress, 
+          restaurantPhone, 
+          IVAnumber 
+        } 
+      },
+      { new: true, runValidators: true } // new: true ritorna i dati già aggiornati
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Utente non trovato." });
+    }
+
+    res.status(200).json({ 
+      message: "Dati del profilo aggiornati con successo!", 
+      user: updatedUser 
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Errore durante l'aggiornamento del profilo.", error: error.message });
+  }
+});
+
+
+// ******************************************************************************
+// 5. ELIMINAZIONE DEFINITIVA DELL'ACCOUNT
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   delete:
+ *     summary: Elimina l'account dell'utente (e ripulisce i piatti custom se ristoratore)
+ *     tags: [Autenticazione]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account eliminato definitivamente
+ *       404:
+ *         description: Utente non trovato
+ */
+router.delete('/me', authMiddleware, async (req, res) => {
+  try {
+    // 1. Integrità referenziale: se l'account è un ristoratore, cancelliamo dal database le sue ricette esclusive
+    if (req.user.role === 'restaurant') {
+      await Meal.deleteMany({ restaurantId: req.user.id });
+    }
+
+    // 2. Eliminazione definitiva del documento utente dalla collezione
+    const deletedUser = await User.findByIdAndDelete(req.user.id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "Utente non trovato." });
+    }
+
+    res.status(200).json({ message: "Account eliminato definitivamente con successo dal sistema." });
+
+  } catch (error) {
+    res.status(500).json({ message: "Errore durante l'eliminazione dell'account.", error: error.message });
+  }
 });
 
 module.exports = router;    
