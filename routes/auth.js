@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs'); // Libreria per la cifratura a una via (hashing) delle password
 const jwt = require('jsonwebtoken'); // Libreria per la creazione e verifica dei JSON Web Token
-const User = require('../models/user'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
+const User = require('../models/User'); //c:/Users/User/Desktop/PROGETTO WEB E MOBILE/FASTFOOD WEBSITE/models/user
 const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
 const authMiddleware = require('../middleware/auth'); // Middleware per proteggere le rotte e verificare il token JWT
 
