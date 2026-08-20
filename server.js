@@ -14,12 +14,16 @@ const mealRoutes = require('./routes/meals'); // Modulo contenente le rotte per 
 const restaurantRoutes = require('./routes/restaurants'); // Modulo contenente le rotte per la gestione dei ristoranti
 
 const app = express(); // Inizializzazione dell'applicazione Express
+const PORT = process.env.PORT || 5000; // Porta su cui il server ascolterà le richieste, predefinita a 5000 se non specificata
 
 // ==========================================
 // MIDDLEWARE GLOBALI
 // ==========================================
 app.use(cors()); // Consente comunicazioni da domini esterni (es. frontend React/Vue o Swagger)
 app.use(express.json()); // Converte i payload JSON in entrata rendendoli disponibili in req.body
+app.use(express.urlencoded({ extended: true })); // Converte i payload URL-encoded in entrata rendendoli disponibili in req.body
+
+app.use(express.static('public')); // Serve i file statici (HTML, CSS, JS) dalla cartella 'public'
 
 // ==========================================
 // CONFIGURAZIONE SWAGGER (OpenAPI 3.0)
@@ -34,7 +38,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
+        url: 'http://localhost:${PORT}', // URL del server locale
         description: 'Server locale di sviluppo',
       },
     ],
@@ -81,5 +85,4 @@ mongoose.connect(process.env.MONGO_URI)
 // ==========================================
 // AVVIO DEL SERVER HTTP
 // ==========================================
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));
