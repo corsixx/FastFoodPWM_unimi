@@ -1,0 +1,106 @@
+/* public/css/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;600&display=swap');
+
+:root {
+  --bg-dark: #0f1115;
+  --bg-card: #181b20;
+  --accent-color: #ff3e3e;
+  --accent-hover: #e03232;
+  --text-main: #ffffff;
+  --text-muted: #9ba1a6;
+  --border-subtle: #2d3239;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, .brand-font {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+/* NAVBAR MODERNA */
+.navbar-custom {
+  background-color: rgba(15, 17, 21, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.navbar-brand {
+  font-size: 1.5rem;
+  color: var(--text-main) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.navbar-brand span {
+  color: var(--accent-color);
+}
+
+/* CARD DEI PIATTI & RISTORANTI */
+.card-custom {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.card-custom:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-color);
+}
+
+.card-custom img {
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* BADGE E BOTTONI */
+.badge-custom {
+  background-color: #262a30;
+  color: #fff;
+  border: 1px solid var(--border-subtle);
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+}
+
+.btn-accent {
+  background-color: var(--accent-color);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.5rem 1.2rem;
+  transition: background 0.2s ease;
+}
+
+.btn-accent:hover {
+  background-color: var(--accent-hover);
+  color: #fff;
+}
+
+.btn-outline-custom {
+  border: 1px solid var(--border-subtle);
+  color: #fff;
+  border-radius: 8px;
+}
+
+.btn-outline-custom:hover {
+  background-color: var(--border-subtle);
+  color: #fff;
+}
+
+/* HERO SECTION */
+.hero-section {
+  padding: 4rem 0 3rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at 80% 20%, rgba(255, 62, 62, 0.08) 0%, rgba(15, 17, 21, 0) 60%);
+}
