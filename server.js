@@ -8,6 +8,7 @@ const swaggerUi = require('swagger-ui-express');  // Libreria per servire l'inte
 const swaggerJsDoc = require('swagger-jsdoc');  // Libreria per generare la documentazione Swagger a partire dai commenti nel codice
 
 // Importazione delle rotte
+const orderRoutes = require('./routes/orders'); // Modulo contenente le rotte per la gestione degli ordini
 const authRoutes = require('./routes/auth'); // Modulo contenente /register e /login
 const mealRoutes = require('./routes/meals'); // Modulo contenente le rotte per la gestione dei piatti (CRUD)
 const restaurantRoutes = require('./routes/restaurants'); // Modulo contenente le rotte per la gestione dei ristoranti
@@ -49,7 +50,7 @@ const swaggerOptions = {
     }
   },
   // Indichiamo direttamente il file per evitare bug di percorsi su Windows
-  apis: ['./routes/auth.js', './routes/meals.js', './routes/restaurants.js'], // Percorsi dei file contenenti le annotazioni Swagger
+  apis: ['./routes/auth.js', './routes/meals.js', './routes/restaurants.js', './routes/orders.js'], // Percorsi dei file contenenti le annotazioni Swagger
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -60,6 +61,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // ==========================================
 // REGISTRAZIONE ROTTE
 // ==========================================
+app.use('/api/orders', orderRoutes); // Monta tutte le rotte degli ordini sotto il prefisso /api/orders
 app.use('/api/auth', authRoutes); // Monta tutte le rotte di autenticazione sotto il prefisso /api/auth
 app.use('/api/meals', mealRoutes); // Monta tutte le rotte dei piatti sotto il prefisso /api/meals
 app.use('/api/restaurants', restaurantRoutes); // Monta tutte le rotte dei ristoranti sotto il prefisso /api/restaurants
