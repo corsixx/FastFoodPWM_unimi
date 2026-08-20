@@ -46,18 +46,11 @@ body {
 
 .brand-logo {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: var(--ff-black);
   text-decoration: none;
-  letter-spacing: -0.05em;
-  text-transform: lowercase;
-}
-
-.brand-logo sup {
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-left: 1px;
+  letter-spacing: -0.04em;
 }
 
 .header-tools-link {
@@ -71,23 +64,47 @@ body {
   cursor: pointer;
 }
 
-/* BARRA CATEGORIE SCROLLABILE */
+/* PULSANTE CAMBIO LINGUA */
+.lang-switch-btn {
+  background: transparent;
+  border: 1px solid var(--ff-border);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ff-black);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
+}
+
+.lang-switch-btn:hover {
+  background-color: var(--ff-black);
+  color: var(--ff-white);
+}
+
+/* BARRA CATEGORIE PERFETTAMENTE CENTRATA */
 .categories-bar-wrapper {
   border-top: 1px solid var(--ff-border);
   background-color: var(--ff-white);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .categories-scroll-container {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
   overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  gap: 0.4rem;
-  padding: 0.45rem 0;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  max-width: 100%;
 }
 
 .categories-scroll-container::-webkit-scrollbar {
@@ -151,34 +168,62 @@ body {
   transform: scale(1.02);
 }
 
+/* CONTENUTO CENTRALE HERO */
 .lookbook-center-content {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  color: #ffffff;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
   z-index: 2;
+  width: 85%;
+  max-width: 380px;
+}
+
+.lookbook-badge {
+  display: inline-block;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  padding: 4px 10px;
+  margin-bottom: 0.6rem;
+  backdrop-filter: blur(4px);
 }
 
 .lookbook-center-content h2 {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 2.2rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  margin: 0 0 1rem 0;
+  text-shadow: 0 3px 15px rgba(0, 0, 0, 0.8);
+}
+
+.lookbook-cta-btn {
+  display: inline-block;
+  background-color: var(--ff-yellow);
+  color: var(--ff-black);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin: 0.2rem 0;
+  padding: 0.8rem 1.6rem;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.lookbook-center-content a {
-  color: #ffffff;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  text-decoration: underline;
+.lookbook-cta-btn:hover {
+  background-color: #ffffff;
+  color: var(--ff-black);
+  transform: translateY(-2px);
 }
 
 /* PRODUCT CARDS */

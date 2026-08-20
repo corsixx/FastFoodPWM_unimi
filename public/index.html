@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>fastfood² // official store</title>
+    <title>FastFood // official store</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,28 +14,34 @@
   <body>
 
     <!-- 1. TOP ANNOUNCEMENT BAR -->
-    <div class="top-bar text-center">
+    <div class="top-bar text-center" id="top-announcement">
       Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
     </div>
 
-    <!-- 2. HEADER: LOGO A SINISTRA (5MC2 STYLE) -->
+    <!-- 2. HEADER: LOGO A SINISTRA -->
     <header class="main-header">
       <div class="container-fluid px-3 px-md-4 py-3">
         <div class="d-flex justify-content-between align-items-center">
           
-          <!-- Logo a sinistra -->
+          <!-- Logo FastFood -->
           <div>
-            <a href="index.html" class="brand-logo">fastfood<sup>²</sup></a>
+            <a href="index.html" class="brand-logo">FastFood</a>
           </div>
 
           <!-- Strumenti a destra -->
           <div class="d-flex align-items-center gap-3">
-            <span class="header-tools-link d-none d-sm-inline">🇮🇹 EUR €</span>
-            <a href="#catalog-section" class="header-tools-link" onclick="focusSearch()">CERCA</a>
+            <!-- Cambio Lingua -->
+            <button class="lang-switch-btn" id="lang-toggle-btn" onclick="toggleLanguage()">
+              <span id="lang-current">IT 🇮🇹</span>
+            </button>
+
+            <!-- Icona Ordini / Carrello -->
             <a href="orders.html" class="header-tools-link position-relative">
               <i class="bi bi-box-seam fs-5"></i>
               <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-black" style="font-size: 0.6rem;">0</span>
             </a>
+
+            <!-- Menu Hamburger -->
             <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
               <i class="bi bi-list fs-4"></i>
             </button>
@@ -44,17 +50,15 @@
         </div>
       </div>
 
-      <!-- Barra Categorie Orizzontale a Scorrimento -->
+      <!-- Barra Categorie Centrata -->
       <div class="categories-bar-wrapper">
-        <div class="container-fluid px-3 px-md-4">
-          <nav class="categories-scroll-container" id="categories-nav">
-            <button class="nav-category-link active" onclick="filterCategory('', this)">ALL / TUTTO</button>
-          </nav>
-        </div>
+        <nav class="categories-scroll-container" id="categories-nav">
+          <button class="nav-category-link active" onclick="filterCategory('', this)" id="btn-all-categories">ALL / TUTTO</button>
+        </nav>
       </div>
     </header>
 
-    <!-- 3. HERO LOOKBOOK MULTI-PANEL -->
+    <!-- 3. HERO LOOKBOOK -->
     <section class="hero-lookbook">
       <div class="lookbook-panel">
         <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80" alt="Burger">
@@ -62,9 +66,9 @@
       <div class="lookbook-panel">
         <img src="https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80" alt="Pasta">
         <div class="lookbook-center-content">
-          <span class="small text-uppercase fw-bold" style="letter-spacing: 0.15em;">SS26 FIRST DELIVERY</span>
-          <h2>FAST TASTE</h2>
-          <a href="#catalog-section">ORDINA DAL MENU</a>
+          <span class="lookbook-badge" id="hero-badge">CATALOGO PIATTI</span>
+          <h2>FASTFOOD</h2>
+          <a href="catalog.html" class="lookbook-cta-btn" id="hero-cta-btn">SCOPRI IL MENU COMPLETO &rarr;</a>
         </div>
       </div>
       <div class="lookbook-panel d-none d-sm-block">
@@ -75,30 +79,30 @@
       </div>
     </section>
 
-    <!-- 4. CATALOGO PRODOTTI -->
+    <!-- 4. CONTENUTO PRINCIPALE -->
     <main class="container-fluid px-3 px-md-4 py-5" id="catalog-section">
 
-      <!-- BACHECA CONSIGLIATI -->
+      <!-- BACHECA CONSIGLIATI (Dinamica) -->
       <section id="recommendations-wrapper" class="mb-5 d-none">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;">SCELTI PER TE (IN BACHECA)</h6>
+          <h6 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;" id="recom-heading">SCELTI PER TE (IN BACHECA)</h6>
           <span class="small text-muted" id="user-pref-label"></span>
         </div>
         <div class="row g-3" id="recommendations-container"></div>
         <hr class="my-5" style="border-color: var(--ff-border);">
       </section>
 
-      <!-- INTESTAZIONE CATALOGO & CERCA -->
+      <!-- INTESTAZIONE SEZIONE -->
       <div class="d-flex justify-content-between align-items-end mb-4">
         <div>
-          <h6 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;">NEW IN / CATALOGO</h6>
+          <h6 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;" id="section-popular-heading">NEW IN / I PIÙ POPOLARI</h6>
         </div>
-        <div style="max-width: 220px;">
-          <input type="text" id="search-box" class="form-control form-control-sm rounded-0 border-dark" placeholder="Cerca piatto..." oninput="handleSearch(this.value)">
+        <div>
+          <a href="catalog.html" class="text-dark small fw-bold text-decoration-underline text-uppercase" id="link-view-all">Vedi Tutto il Menu</a>
         </div>
       </div>
 
-      <!-- GRIGLIA PRODOTTI -->
+      <!-- GRIGLIA PRODOTTI (MAX 16 ELEMENTI) -->
       <div class="row g-3 g-md-4" id="meals-grid"></div>
 
     </main>
@@ -109,28 +113,28 @@
         <div class="row g-4">
           
           <div class="col-6 col-md-3">
-            <div class="footer-title">SERVIZIO</div>
-            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo">Come Ordinare</a>
-            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo">Ritiro al Bancone</a>
-            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo">Tempi di Attesa</a>
+            <div class="footer-title" id="footer-title-service">SERVIZIO</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="footer-link-how">Come Ordinare</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="footer-link-pickup">Ritiro al Bancone</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="footer-link-wait">Tempi di Attesa</a>
           </div>
 
           <div class="col-6 col-md-3">
-            <div class="footer-title">PARTNER</div>
-            <a href="register.html" class="footer-link">Diventa un Ristorante Partner</a>
-            <a href="login.html" class="footer-link">Accedi al Gestionale</a>
+            <div class="footer-title" id="footer-title-partner">PARTNER</div>
+            <a href="register.html" class="footer-link" id="footer-link-partner">Diventa un Ristorante Partner</a>
+            <a href="login.html" class="footer-link" id="footer-link-manage">Accedi al Gestionale</a>
           </div>
 
           <div class="col-6 col-md-3">
-            <div class="footer-title">SUPPORTO</div>
-            <a href="mailto:support@fastfood.local" class="footer-link">Contatta Assistenza</a>
-            <span class="footer-link text-muted">Chat 24/7 Attiva</span>
+            <div class="footer-title" id="footer-title-support">SUPPORTO</div>
+            <a href="mailto:support@fastfood.local" class="footer-link" id="footer-link-help">Contatta Assistenza</a>
+            <span class="footer-link text-muted" id="footer-link-chat">Chat 24/7 Attiva</span>
           </div>
 
           <div class="col-6 col-md-3">
             <div class="footer-title">LEGAL</div>
-            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal">Privacy & Termini</a>
-            <span class="footer-link text-muted mt-2">&copy; 2026 fastfood² Network</span>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal" id="footer-link-legal">Privacy & Termini</a>
+            <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
           </div>
 
         </div>
@@ -142,11 +146,11 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 border-dark">
           <div class="modal-header border-bottom">
-            <h6 class="modal-title fw-bold text-uppercase">Informazioni Servizio</h6>
+            <h6 class="modal-title fw-bold text-uppercase" id="modal-info-title">Informazioni Servizio</h6>
             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body small text-muted">
-            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code. I tempi di attesa sono calcolati in tempo reale in base agli ordini in coda nella cucina del ristorante.
+          <div class="modal-body small text-muted" id="modal-info-body">
+            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code. I tempi di attesa sono calcolati in tempo reale in base agli ordini in cucina.
           </div>
         </div>
       </div>
@@ -156,17 +160,17 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 border-dark">
           <div class="modal-header border-bottom">
-            <h6 class="modal-title fw-bold text-uppercase">Termini & Note Legali</h6>
+            <h6 class="modal-title fw-bold text-uppercase" id="modal-legal-title">Termini & Note Legali</h6>
             <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body small text-muted">
-            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in conformità con i requisiti del progetto e memorizzati in modo sicuro su database.
+          <div class="modal-body small text-muted" id="modal-legal-body">
+            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 6. MENU OFFCANVAS LATERALE -->
+    <!-- 6. MENU OFFCANVAS LATERALE (CON RISTORANTI) -->
     <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
       <div class="offcanvas-header justify-content-end pb-0">
         <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
@@ -174,7 +178,8 @@
       
       <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
         <div>
-          <a href="index.html" class="drawer-nav-item">CATALOGO COMPLETO <i class="bi bi-chevron-right small"></i></a>
+          <a href="catalog.html" class="drawer-nav-item" id="drawer-catalog-link">CATALOGO COMPLETO <i class="bi bi-chevron-right small"></i></a>
+          <a href="restaurants.html" class="drawer-nav-item" id="drawer-restaurants-link">I NOSTRI RISTORANTI <i class="bi bi-chevron-right small"></i></a>
           <a href="orders.html" class="drawer-nav-item" id="drawer-orders-link">I MIEI ORDINI <i class="bi bi-chevron-right small"></i></a>
           <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link">STATISTICHE LOCALE <i class="bi bi-chevron-right small"></i></a>
         </div>

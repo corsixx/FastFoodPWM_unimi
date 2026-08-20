@@ -1,8 +1,78 @@
 let currentCategory = '';
-let currentSearch = '';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let currentLang = localStorage.getItem('appLang') || 'IT';
+
+const translations = {
+  IT: {
+    currentFlag: 'IT 🇮🇹',
+    topAnnouncement: 'Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido',
+    heroBadge: 'CATALOGO PIATTI',
+    heroCta: 'SCOPRI IL MENU COMPLETO &rarr;',
+    recomHeading: 'SCELTI PER TE (IN BACHECA)',
+    popularHeading: 'NEW IN / I PIÙ POPOLARI',
+    viewAll: 'Vedi Tutto il Menu',
+    allCategories: 'ALL / TUTTO',
+    prepTime: 'prep',
+    drawerCatalog: 'CATALOGO COMPLETO',
+    drawerRestaurants: 'I NOSTRI RISTORANTI',
+    drawerOrders: 'I MIEI ORDINI',
+    drawerStats: 'STATISTICHE LOCALE',
+    loginBtn: 'ACCEDI',
+    regBtn: 'REGISTRATI',
+    logoutBtn: 'LOGOUT',
+    loggedInAs: 'ACCESSO EFFETTUATO COME:',
+    footerService: 'SERVIZIO',
+    footerHow: 'Come Ordinare',
+    footerPickup: 'Ritiro al Bancone',
+    footerWait: 'Tempi di Attesa',
+    footerPartner: 'PARTNER',
+    footerJoin: 'Diventa un Ristorante Partner',
+    footerManage: 'Accedi al Gestionale',
+    footerSupport: 'SUPPORTO',
+    footerHelp: 'Contatta Assistenza',
+    footerChat: 'Chat 24/7 Attiva',
+    modalInfoTitle: 'Informazioni Servizio',
+    modalInfoBody: 'Scegli i piatti dal menu, inoltra l\'ordine e ritira direttamente al punto cassa senza code. I tempi di attesa sono calcolati in tempo reale in base agli ordini in cucina.',
+    modalLegalTitle: 'Termini & Note Legali',
+    modalLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
+  },
+  EN: {
+    currentFlag: 'EN 🇬🇧',
+    topAnnouncement: '24/7 Live Chat Support &bull; Counter Pickup & Express Takeout',
+    heroBadge: 'FULL CATALOG',
+    heroCta: 'EXPLORE FULL MENU &rarr;',
+    recomHeading: 'CHOSEN FOR YOU (RECOMMENDED)',
+    popularHeading: 'NEW IN / MOST POPULAR',
+    viewAll: 'View Full Menu',
+    allCategories: 'ALL',
+    prepTime: 'prep',
+    drawerCatalog: 'FULL CATALOG',
+    drawerRestaurants: 'OUR RESTAURANTS',
+    drawerOrders: 'MY ORDERS',
+    drawerStats: 'RESTAURANT STATS',
+    loginBtn: 'LOGIN',
+    regBtn: 'REGISTER',
+    logoutBtn: 'LOGOUT',
+    loggedInAs: 'LOGGED IN AS:',
+    footerService: 'SERVICE',
+    footerHow: 'How to Order',
+    footerPickup: 'Counter Pickup',
+    footerWait: 'Wait Times',
+    footerPartner: 'PARTNER',
+    footerJoin: 'Become a Partner Restaurant',
+    footerManage: 'Access Dashboard',
+    footerSupport: 'SUPPORT',
+    footerHelp: 'Contact Support',
+    footerChat: '24/7 Chat Active',
+    modalInfoTitle: 'Service Information',
+    modalInfoBody: 'Choose dishes from the menu, place your order and pick up at the counter with no queue. Wait times are calculated in real time based on kitchen load.',
+    modalLegalTitle: 'Terms & Legal Notes',
+    modalLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in the database.'
+  }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyLanguage(currentLang);
   renderCartBadge();
   loadBackendCategories();
   loadCatalog();
@@ -12,7 +82,63 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Abilita lo scorrimento della barra categorie tramite rotella del mouse
+ * CAMBIO LINGUA (IT <-> EN)
+ */
+function toggleLanguage() {
+  currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
+  localStorage.setItem('appLang', currentLang);
+  applyLanguage(currentLang);
+  renderDrawerAuth();
+  loadCatalog();
+  loadBackendCategories();
+}
+
+function applyLanguage(lang) {
+  const t = translations[lang];
+
+  const setHtml = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
+
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+
+  setText('lang-current', t.currentFlag);
+  setHtml('top-announcement', t.topAnnouncement);
+  setText('hero-badge', t.heroBadge);
+  setHtml('hero-cta-btn', t.heroCta);
+  setText('recom-heading', t.recomHeading);
+  setText('section-popular-heading', t.popularHeading);
+  setText('link-view-all', t.viewAll);
+  setText('btn-all-categories', t.allCategories);
+
+  // Footer & Modali
+  setText('footer-title-service', t.footerService);
+  setText('footer-link-how', t.footerHow);
+  setText('footer-link-pickup', t.footerPickup);
+  setText('footer-link-wait', t.footerWait);
+  setText('footer-title-partner', t.footerPartner);
+  setText('footer-link-partner', t.footerJoin);
+  setText('footer-link-manage', t.footerManage);
+  setText('footer-title-support', t.footerSupport);
+  setText('footer-link-help', t.footerHelp);
+  setText('footer-link-chat', t.footerChat);
+  setText('modal-info-title', t.modalInfoTitle);
+  setText('modal-info-body', t.modalInfoBody);
+  setText('modal-legal-title', t.modalLegalTitle);
+  setText('modal-legal-body', t.modalLegalBody);
+
+  // Drawer
+  setText('drawer-catalog-link', t.drawerCatalog);
+  setText('drawer-restaurants-link', t.drawerRestaurants);
+  setText('drawer-orders-link', t.drawerOrders);
+}
+
+/**
+ * SCORRIMENTO ORIZZONTALE BARRA
  */
 function setupHorizontalWheelScroll() {
   const scrollNav = document.getElementById('categories-nav');
@@ -25,51 +151,51 @@ function setupHorizontalWheelScroll() {
 }
 
 /**
- * Recupera le categorie distinte dal database e crea i bottoni
+ * CARICAMENTO CATEGORIE DA MONGODB
  */
 async function loadBackendCategories() {
   const navContainer = document.getElementById('categories-nav');
   try {
     const categories = await apiRequest('/meals/categories');
+    const t = translations[currentLang];
     
     if (categories && Array.isArray(categories) && categories.length > 0) {
       const dynamicButtons = categories.map(cat => `
-        <button class="nav-category-link" onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
+        <button class="nav-category-link ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
           ${cat.toUpperCase()}
         </button>
       `).join('');
 
       navContainer.innerHTML = `
-        <button class="nav-category-link active" onclick="filterCategory('', this)">ALL / TUTTO</button>
+        <button class="nav-category-link ${currentCategory === '' ? 'active' : ''}" onclick="filterCategory('', this)" id="btn-all-categories">${t.allCategories}</button>
         ${dynamicButtons}
       `;
     }
   } catch (error) {
-    console.error("Impossibile caricare le categorie dinamiche:", error);
+    console.error("Impossibile caricare le categorie:", error);
   }
 }
 
 /**
- * Carica fino a un massimo di 16 piatti nella griglia principale
+ * CARICAMENTO FINO A 16 PIATTI
  */
 async function loadCatalog() {
   const grid = document.getElementById('meals-grid');
   if (!grid) return;
 
-  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">CARICAMENTO IN CORSO...</div>`;
+  const t = translations[currentLang];
+  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'CARICAMENTO IN CORSO...' : 'LOADING ITEMS...'}</div>`;
 
   try {
     let url = '/meals';
-    const params = new URLSearchParams();
-    if (currentSearch) params.append('name', currentSearch);
-    if (currentCategory) params.append('category', currentCategory);
-
-    if (params.toString()) url += `?${params.toString()}`;
+    if (currentCategory) {
+      url += `?category=${encodeURIComponent(currentCategory)}`;
+    }
 
     const meals = await apiRequest(url);
 
     if (!meals || meals.length === 0) {
-      grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">NESSUN PRODOTTO PRESENTE IN QUESTA CATEGORIA.</div>`;
+      grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'NESSUN PRODOTTO PRESENTE.' : 'NO ITEMS AVAILABLE.'}</div>`;
       return;
     }
 
@@ -79,22 +205,22 @@ async function loadCatalog() {
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
           <div class="product-img-wrapper">
-            <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=Fastfood'}" alt="${m.strMeal}" loading="lazy">
+            <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood'}" alt="${m.strMeal}" loading="lazy">
             <span class="product-tag">${m.strCategory || 'MENU'}</span>
           </div>
           <div class="product-title">${m.strMeal}</div>
-          <div class="product-price">€ ${m.price.toFixed(2)} &bull; <span class="small">${m.preparationTime || 10}m prep</span></div>
+          <div class="product-price">€ ${m.price.toFixed(2)} &bull; <span class="small">${m.preparationTime || 10}m ${t.prepTime}</span></div>
         </div>
       </div>
     `).join('');
 
   } catch (error) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore di connessione al database piatti.</div>`;
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore di caricamento.</div>`;
   }
 }
 
 /**
- * Carica i piatti consigliati per l'utente loggato
+ * CARICAMENTO BACHECA CONSIGLIATI
  */
 async function loadRecommendations() {
   const token = localStorage.getItem('token');
@@ -105,7 +231,7 @@ async function loadRecommendations() {
     const data = await apiRequest('/meals/recommendations');
     if (data.recommendations && data.recommendations.length > 0) {
       document.getElementById('recommendations-wrapper').classList.remove('d-none');
-      document.getElementById('user-pref-label').textContent = `Preferenza: ${data.favoriteCategory || 'In evidenza'}`;
+      document.getElementById('user-pref-label').textContent = `${data.favoriteCategory || 'In evidenza'}`;
       
       const container = document.getElementById('recommendations-container');
       container.innerHTML = data.recommendations.slice(0, 4).map(m => `
@@ -113,7 +239,7 @@ async function loadRecommendations() {
           <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
             <div class="product-img-wrapper">
               <img src="${m.strMealThumb}" alt="${m.strMeal}">
-              <span class="product-tag" style="background-color: var(--ff-yellow); color: #000;">PER TE</span>
+              <span class="product-tag" style="background-color: var(--ff-yellow); color: #000;">TOP</span>
             </div>
             <div class="product-title">${m.strMeal}</div>
             <div class="product-price">€ ${m.price.toFixed(2)}</div>
@@ -122,12 +248,12 @@ async function loadRecommendations() {
       `).join('');
     }
   } catch (e) {
-    // Nessuna preferenza disponibile
+    // Silenzioso
   }
 }
 
 /**
- * Filtri per categoria
+ * FILTRI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
@@ -141,23 +267,7 @@ function filterCategory(categoryName, btnElement) {
 }
 
 /**
- * Ricerca testuale
- */
-function handleSearch(value) {
-  currentSearch = value.trim();
-  loadCatalog();
-}
-
-function focusSearch() {
-  const searchInput = document.getElementById('search-box');
-  if (searchInput) {
-    searchInput.focus();
-    searchInput.scrollIntoView({ behavior: 'smooth' });
-  }
-}
-
-/**
- * Gestione carrello in localStorage
+ * CARRELLO
  */
 function addToCart(mealId, name, price) {
   const existing = cart.find(item => item.mealId === mealId);
@@ -183,13 +293,14 @@ function renderCartBadge() {
 }
 
 /**
- * Stato utente nel drawer laterale
+ * STATO AUTENTICAZIONE DRAWER
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
   const name = localStorage.getItem('userName');
   const drawerSec = document.getElementById('drawer-user-section');
+  const t = translations[currentLang];
 
   if (!drawerSec) return;
 
@@ -197,19 +308,19 @@ function renderDrawerAuth() {
     const statsLink = document.getElementById('drawer-stats-link');
     const ordersLink = document.getElementById('drawer-orders-link');
     if (statsLink) statsLink.classList.remove('d-none');
-    if (ordersLink) ordersLink.textContent = 'GESTIONALE COMANDE';
+    if (ordersLink) ordersLink.textContent = t.drawerStats;
   }
 
   if (token) {
     drawerSec.innerHTML = `
-      <div class="small text-muted mb-1">ACCESSO EFFETTUATO COME:</div>
+      <div class="small text-muted mb-1">${t.loggedInAs}</div>
       <div class="fw-bold text-uppercase mb-3">${name || 'Utente'} (${role})</div>
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">LOGOUT</button>
+      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">${t.logoutBtn}</button>
     `;
   } else {
     drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">ACCEDI</a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">REGISTRATI</a>
+      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.loginBtn}</a>
+      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.regBtn}</a>
     `;
   }
 }
