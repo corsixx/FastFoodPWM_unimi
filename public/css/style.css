@@ -1,18 +1,16 @@
-/* public/css/style.css */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
   --ff-yellow: #f0db4f;
   --ff-black: #000000;
   --ff-white: #ffffff;
   --ff-gray-bg: #f5f5f5;
-  --ff-gray-text: #707070;
-  --ff-border: #e8e8e8;
+  --ff-gray-text: #777777;
+  --ff-border: #e5e5e5;
 }
 
 * {
   box-sizing: border-box;
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -21,6 +19,7 @@ body {
   color: var(--ff-black);
   margin: 0;
   padding: 0;
+  font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
 
@@ -28,52 +27,54 @@ body {
 .top-bar {
   background-color: var(--ff-yellow);
   color: var(--ff-black);
-  font-size: 0.75rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.35rem 0;
 }
 
-/* HEADER FISSO */
+/* HEADER & LOGO */
 .main-header {
   background-color: var(--ff-white);
+  border-bottom: 1px solid var(--ff-border);
   position: sticky;
   top: 0;
   z-index: 1020;
-  border-bottom: 1px solid var(--ff-border);
 }
 
 .brand-logo {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--ff-black);
   text-decoration: none;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
+  text-transform: lowercase;
 }
 
-.brand-logo span {
-  font-size: 0.8rem;
-  vertical-align: super;
+.brand-logo sup {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 1px;
 }
 
 .header-tools-link {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
   color: var(--ff-black);
   text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
-/* BARRA CATEGORIE SCROLLABILE (SENZA SEPARATORI) */
+/* BARRA CATEGORIE SCROLLABILE */
 .categories-bar-wrapper {
-  background-color: var(--ff-white);
-  width: 100%;
   border-top: 1px solid var(--ff-border);
+  background-color: var(--ff-white);
 }
 
 .categories-scroll-container {
@@ -83,8 +84,8 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   white-space: nowrap;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
+  gap: 0.4rem;
+  padding: 0.45rem 0;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -96,22 +97,21 @@ body {
 .nav-category-link {
   background: transparent;
   border: none;
-  outline: none;
-  font-size: 0.75rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--ff-black);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 0.4rem 0.9rem;
+  padding: 0.35rem 0.75rem;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.15s ease-in-out;
-  border-radius: 0;
+  transition: all 0.15s ease;
 }
 
 .nav-category-link:hover {
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .nav-category-link.active {
@@ -123,10 +123,9 @@ body {
 .hero-lookbook {
   display: flex;
   width: 100%;
-  height: 60vh;
-  min-height: 420px;
+  height: 68vh;
+  min-height: 460px;
   overflow: hidden;
-  background-color: #d8cbba;
   border-bottom: 1px solid var(--ff-border);
 }
 
@@ -145,36 +144,45 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.5s ease;
 }
 
 .lookbook-panel:hover img {
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 
-.lookbook-overlay-text {
+.lookbook-center-content {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
-  pointer-events: none;
+  color: #ffffff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  z-index: 2;
 }
 
-.lookbook-overlay-text h2 {
+.lookbook-center-content h2 {
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 2.2rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin: 0;
+  margin: 0.2rem 0;
 }
 
-/* PRODUCT CARD STILE 5MC2 */
+.lookbook-center-content a {
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-decoration: underline;
+}
+
+/* PRODUCT CARDS */
 .product-card {
-  border: none;
-  background: transparent;
   cursor: pointer;
   text-align: left;
 }
@@ -184,7 +192,7 @@ body {
   background-color: var(--ff-gray-bg);
   aspect-ratio: 3/4;
   overflow: hidden;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .product-img-wrapper img {
@@ -199,7 +207,8 @@ body {
   left: 8px;
   background-color: var(--ff-black);
   color: var(--ff-white);
-  font-size: 0.65rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   padding: 2px 6px;
@@ -207,52 +216,62 @@ body {
 }
 
 .product-title {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 0.2rem;
-  color: var(--ff-black);
+  margin-bottom: 0.15rem;
 }
 
 .product-price {
-  font-size: 0.85rem;
-  font-weight: 400;
+  font-size: 0.8rem;
   color: var(--ff-gray-text);
 }
 
-/* OFFCANVAS / DRAWER */
+/* FOOTER */
+.main-footer {
+  border-top: 1px solid var(--ff-border);
+  padding: 3.5rem 0 2rem 0;
+  background-color: var(--ff-white);
+  font-size: 0.78rem;
+}
+
+.footer-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+}
+
+.footer-link {
+  color: var(--ff-gray-text);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.footer-link:hover {
+  color: var(--ff-black);
+}
+
+/* OFFCANVAS DRAWER */
 .offcanvas-5mc2 {
-  width: 360px !important;
+  width: 340px !important;
   border-left: 1px solid var(--ff-border);
 }
 
 .drawer-nav-item {
   border-bottom: 1px solid var(--ff-border);
-  padding: 1rem 0;
-  font-size: 0.9rem;
-  font-weight: 600;
+  padding: 0.9rem 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
   text-transform: uppercase;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: var(--ff-black);
   text-decoration: none;
-}
-
-.btn-black {
-  background-color: var(--ff-black);
-  color: var(--ff-white);
-  border: none;
-  border-radius: 0;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
-  padding: 0.8rem 1.2rem;
-  width: 100%;
-}
-
-.btn-black:hover {
-  background-color: #222;
-  color: #fff;
 }

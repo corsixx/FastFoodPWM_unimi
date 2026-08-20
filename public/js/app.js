@@ -1,20 +1,18 @@
-// public/js/app.js
-
 let currentCategory = '';
 let currentSearch = '';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
 document.addEventListener('DOMContentLoaded', () => {
   renderCartBadge();
-  loadBackendCategories(); // 1. Scarica le categorie da MongoDB e crea i tasti
-  loadCatalog();           // 2. Scarica i piatti e le foto
-  loadRecommendations();   // 3. Scarica la bacheca personalizzata
-  renderDrawerAuth();      // 4. Configura il menu laterale
+  loadBackendCategories();
+  loadCatalog();
+  loadRecommendations();
+  renderDrawerAuth();
   setupHorizontalWheelScroll();
 });
 
 /**
- * 1. SCORRIMENTO ORIZZONTALE BARRA CATEGORIE
+ * Abilita lo scorrimento della barra categorie tramite rotella del mouse
  */
 function setupHorizontalWheelScroll() {
   const scrollNav = document.getElementById('categories-nav');
@@ -27,7 +25,7 @@ function setupHorizontalWheelScroll() {
 }
 
 /**
- * 2. RECUPERO CATEGORIE DAL BACKEND
+ * Recupera le categorie distinte dal database e crea i bottoni
  */
 async function loadBackendCategories() {
   const navContainer = document.getElementById('categories-nav');
@@ -52,10 +50,12 @@ async function loadBackendCategories() {
 }
 
 /**
- * 3. CARICAMENTO PIATTI DAL DATABASE
+ * Carica fino a un massimo di 16 piatti nella griglia principale
  */
 async function loadCatalog() {
   const grid = document.getElementById('meals-grid');
+  if (!grid) return;
+
   grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">CARICAMENTO IN CORSO...</div>`;
 
   try {
@@ -73,7 +73,9 @@ async function loadCatalog() {
       return;
     }
 
-    grid.innerHTML = meals.map(m => `
+    const limitedMeals = meals.slice(0, 16);
+
+    grid.innerHTML = limitedMeals.map(m => `
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
           <div class="product-img-wrapper">
@@ -92,7 +94,7 @@ async function loadCatalog() {
 }
 
 /**
- * 4. CARICAMENTO BACHECA PERSONALIZZATA
+ * Carica i piatti consigliati per l'utente loggato
  */
 async function loadRecommendations() {
   const token = localStorage.getItem('token');
@@ -120,12 +122,12 @@ async function loadRecommendations() {
       `).join('');
     }
   } catch (e) {
-    // Nessuna preferenza da mostrare
+    // Nessuna preferenza disponibile
   }
 }
 
 /**
- * 5. FILTRI E RICERCA
+ * Filtri per categoria
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
@@ -138,6 +140,9 @@ function filterCategory(categoryName, btnElement) {
   loadCatalog();
 }
 
+/**
+ * Ricerca testuale
+ */
 function handleSearch(value) {
   currentSearch = value.trim();
   loadCatalog();
@@ -152,7 +157,7 @@ function focusSearch() {
 }
 
 /**
- * 6. GESTIONE CARRELLO
+ * Gestione carrello in localStorage
  */
 function addToCart(mealId, name, price) {
   const existing = cart.find(item => item.mealId === mealId);
@@ -165,8 +170,10 @@ function addToCart(mealId, name, price) {
   renderCartBadge();
 
   const badge = document.getElementById('cart-badge');
-  badge.classList.add('bg-warning', 'text-dark');
-  setTimeout(() => badge.classList.remove('bg-warning', 'text-dark'), 300);
+  if (badge) {
+    badge.classList.add('bg-warning', 'text-dark');
+    setTimeout(() => badge.classList.remove('bg-warning', 'text-dark'), 300);
+  }
 }
 
 function renderCartBadge() {
@@ -176,13 +183,15 @@ function renderCartBadge() {
 }
 
 /**
- * 7. GESTIONE DRAWER UTENTE
+ * Stato utente nel drawer laterale
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
   const name = localStorage.getItem('userName');
   const drawerSec = document.getElementById('drawer-user-section');
+
+  if (!drawerSec) return;
 
   if (role === 'restaurant') {
     const statsLink = document.getElementById('drawer-stats-link');
@@ -199,8 +208,8 @@ function renderDrawerAuth() {
     `;
   } else {
     drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-black mb-2">ACCEDI</a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100">REGISTRATI</a>
+      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">ACCEDI</a>
+      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">REGISTRATI</a>
     `;
   }
 }
