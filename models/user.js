@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     // Ruolo utente: accetta solo 'customer' o 'restaurant', di base è 'customer'
     role: { 
         type: String, 
-        enum: ['customer', 'restaurant'], 
+        enum: ['customer', 'restaurant', 'admin'], 
         default: 'customer' 
     },
 
