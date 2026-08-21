@@ -6,10 +6,10 @@ let currentPage = 1;
 let currentCategory = '';
 let currentSearch = '';
 let currentSort = 'default';
+let currentRestaurantFilter = '';
 let rawMealsList = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentLang = localStorage.getItem('appLang') || 'IT';
-let mealModalInstance = null;
 
 const i18n = {
   IT: {
@@ -30,9 +30,8 @@ const i18n = {
     pageLabel: 'PAG.',
     btnView: 'VEDI',
     btnCart: '+ CARRELLO',
-    modalDesc: 'Descrizione & Ingredienti',
-    modalAdd: 'AGGIUNGI AL CARRELLO',
-    prepTimeLabel: 'Tempo di preparazione:',
+    restFilterLabel: 'Menu del locale:',
+    btnResetFilter: 'Mostra Tutto il Menu ×',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
     dOrders: 'I MIEI ORDINI',
@@ -74,9 +73,8 @@ const i18n = {
     pageLabel: 'PAGE',
     btnView: 'VIEW',
     btnCart: '+ ADD',
-    modalDesc: 'Description & Ingredients',
-    modalAdd: 'ADD TO CART',
-    prepTimeLabel: 'Preparation time:',
+    restFilterLabel: 'Menu of partner:',
+    btnResetFilter: 'Show Full Menu ×',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
     dOrders: 'MY ORDERS',
@@ -103,9 +101,10 @@ const i18n = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  const modalEl = document.getElementById('modalMealDetail');
-  if (modalEl) {
-    mealModalInstance = new bootstrap.Modal(modalEl);
+  const urlParams = new URLSearchParams(window.location.search);
+  const restParam = urlParams.get('restaurant');
+  if (restParam) {
+    currentRestaurantFilter = restParam;
   }
 
   renderLanguageUI();
@@ -149,8 +148,8 @@ function renderLanguageUI() {
   setT('opt-sort-time', t.sortTime);
   setT('opt-sort-name', t.sortName);
 
-  setT('txt-modal-desc', t.modalDesc);
-  setT('txt-modal-add', t.modalAdd);
+  setT('txt-rest-filter-label', t.restFilterLabel);
+  setT('btn-reset-rest-filter', t.btnResetFilter);
 
   setT('txt-f-service', t.fService);
   setT('txt-f-how', t.fHow);
@@ -199,7 +198,7 @@ async function loadBackendCategories() {
       `;
     }
   } catch (err) {
-    console.error("Errore categorie:", err);
+    console.error("Errore caricamento categorie:", err);
   }
 }
 
@@ -216,10 +215,19 @@ async function loadFullCatalog() {
   try {
     const meals = await apiRequest('/meals');
     rawMealsList = meals || [];
+
+    if (currentRestaurantFilter) {
+      const banner = document.getElementById('restaurant-filter-banner');
+      const bannerName = document.getElementById('filtered-restaurant-name');
+      if (banner) banner.classList.remove('d-none');
+      if (bannerName) bannerName.textContent = 'Partner';
+    }
+
     currentPage = 1;
     updateView();
   } catch (err) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti.</div>`;
+    console.error('Errore chiamata catalogo:', err);
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti dal database.</div>`;
   }
 }
 
@@ -228,6 +236,13 @@ async function loadFullCatalog() {
  */
 function getFilteredAndSortedMeals() {
   let list = [...rawMealsList];
+
+  if (currentRestaurantFilter) {
+    list = list.filter(m => 
+      m.restaurantId === currentRestaurantFilter || 
+      m.restaurant === currentRestaurantFilter
+    );
+  }
 
   if (currentCategory) {
     list = list.filter(m => m.strCategory && m.strCategory.toLowerCase() === currentCategory.toLowerCase());
@@ -279,7 +294,7 @@ function updateView() {
 }
 
 /**
- * 6. RENDERING DELLE CARD (CON TASTO VIEW E TASTO CARRELLO SEPARATI)
+ * 6. RENDERING CARD (CON REINDIRIZZAMENTO A MEAL.HTML)
  */
 function renderMealsGrid(meals) {
   const grid = document.getElementById('meals-grid');
@@ -296,9 +311,9 @@ function renderMealsGrid(meals) {
     <div class="col-6 col-md-4 col-lg-3">
       <div class="product-card">
         
-        <!-- Immagine cliccabile per aprire i dettagli -->
-        <div class="product-img-wrapper" onclick="openMealDetails('${m._id}')">
-          <img src="${m.strMealThumb || 'https://via.placeholder.com/400x300?text=FastFood'}" alt="${m.strMeal || ''}" loading="lazy">
+        <!-- Immagine cliccabile: porta a meal.html -->
+        <div class="product-img-wrapper" onclick="goToMealPage('${m._id}')">
+          <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood'}" alt="${m.strMeal || ''}" loading="lazy">
           <span class="product-tag">${m.strCategory || 'MENU'}</span>
         </div>
 
@@ -307,12 +322,12 @@ function renderMealsGrid(meals) {
           <div class="product-price">€ ${(m.price || 0).toFixed(2)} <span class="small text-muted fw-normal">&bull; ${m.preparationTime || 10}m ${t.prep}</span></div>
         </div>
 
-        <!-- ACTION GROUP: TASTO VEDI E TASTO CARRELLO -->
+        <!-- GRUPPO TASTI VEDI & + CARRELLO -->
         <div class="card-action-group">
-          <button class="btn-card-action btn-card-view" onclick="openMealDetails('${m._id}')">
+          <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
             <i class="bi bi-eye"></i> ${t.btnView}
           </button>
-          <button class="btn-card-action btn-card-cart" onclick="addToCart('${m._id}', '${(m.strMeal || 'Piatto').replace(/'/g, "\\'")}', ${m.price || 0})">
+          <button type="button" class="btn-card-action btn-card-cart" onclick="addToCart('${m._id}', '${(m.strMeal || 'Piatto').replace(/'/g, "\\'")}', ${m.price || 0})">
             <i class="bi bi-bag-plus"></i> ${t.btnCart}
           </button>
         </div>
@@ -322,40 +337,12 @@ function renderMealsGrid(meals) {
   `).join('');
 }
 
-/**
- * 7. APRE LA MODALE DI DETTAGLIO PIATTO (VIEW)
- */
-function openMealDetails(mealId) {
-  const meal = rawMealsList.find(m => m._id === mealId);
-  if (!meal) return;
-
-  const t = i18n[currentLang];
-
-  document.getElementById('modal-meal-name').textContent = meal.strMeal || 'DETTAGLIO PIATTO';
-  document.getElementById('modal-meal-title').textContent = meal.strMeal || 'Piatto';
-  document.getElementById('modal-meal-category').textContent = meal.strCategory || 'MENU';
-  document.getElementById('modal-meal-price').textContent = `€ ${(meal.price || 0).toFixed(2)}`;
-  document.getElementById('modal-meal-img').src = meal.strMealThumb || 'https://via.placeholder.com/400x300?text=FastFood';
-  
-  document.getElementById('modal-meal-time').innerHTML = `
-    <i class="bi bi-clock me-1"></i> ${t.prepTimeLabel} <strong>${meal.preparationTime || 10} min</strong>
-  `;
-
-  document.getElementById('modal-meal-desc').textContent = meal.strInstructions || 'Nessuna descrizione o ingrediente disponibile.';
-
-  const btnAdd = document.getElementById('modal-btn-add-cart');
-  btnAdd.onclick = () => {
-    addToCart(meal._id, meal.strMeal || 'Piatto', meal.price || 0);
-    if (mealModalInstance) mealModalInstance.hide();
-  };
-
-  if (mealModalInstance) {
-    mealModalInstance.show();
-  }
+function goToMealPage(mealId) {
+  window.location.href = `meal.html?id=${encodeURIComponent(mealId)}`;
 }
 
 /**
- * 8. RENDERING CONTROLLER PAGINAZIONE MINIMALE (FRECCETTE)
+ * 7. PAGINAZIONE FRECCETTE
  */
 function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
@@ -391,7 +378,7 @@ function goToPage(page) {
 }
 
 /**
- * 9. HANDLERS EVENTI
+ * 8. HANDLERS EVENTI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
@@ -412,8 +399,17 @@ function handleSort(val) {
   updateView();
 }
 
+function resetRestaurantFilter() {
+  currentRestaurantFilter = '';
+  const banner = document.getElementById('restaurant-filter-banner');
+  if (banner) banner.classList.add('d-none');
+  window.history.replaceState({}, document.title, 'catalog.html');
+  currentPage = 1;
+  updateView();
+}
+
 /**
- * 10. CARRELLO
+ * 9. CARRELLO
  */
 function addToCart(mealId, name, price) {
   const item = cart.find(i => i.mealId === mealId);
@@ -437,7 +433,7 @@ function renderCartBadge() {
 }
 
 /**
- * 11. SCORRIMENTO BARRA CATEGORIE
+ * 10. SCORRIMENTO BARRA CATEGORIE
  */
 function setupBarMovement() {
   const slider = document.querySelector('.categories-bar-wrapper');
@@ -473,7 +469,7 @@ function setupBarMovement() {
 }
 
 /**
- * 12. STATO DRAWER UTENTE
+ * 11. STATO DRAWER UTENTE
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
