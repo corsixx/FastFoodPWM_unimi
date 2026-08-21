@@ -279,6 +279,50 @@ body {
   color: var(--ff-gray-text);
 }
 
+/* PAGINAZIONE MINIMALE & STILIZZATA */
+.pagination-minimal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--ff-border);
+  padding: 0.35rem 0.6rem;
+  background-color: var(--ff-white);
+}
+
+.page-arrow-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ff-black);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-arrow-btn:hover:not(:disabled) {
+  background-color: var(--ff-black);
+  color: var(--ff-white);
+}
+
+.page-arrow-btn:disabled {
+  color: #cccccc;
+  cursor: not-allowed;
+}
+
+.page-counter-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  min-width: 90px;
+  text-align: center;
+}
+
 /* FOOTER */
 .main-footer {
   border-top: 1px solid var(--ff-border);

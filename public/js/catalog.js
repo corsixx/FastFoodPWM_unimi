@@ -1,6 +1,6 @@
 // public/js/catalog.js
 
-const ITEMS_PER_PAGE = 8; // 8 piatti per pagina (2 righe piene su desktop)
+const ITEMS_PER_PAGE = 8;
 let currentPage = 1;
 
 let currentCategory = '';
@@ -26,8 +26,7 @@ const i18n = {
     foundItems: 'piatti trovati',
     noItems: 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.',
     loading: 'CARICAMENTO CATALOGO IN CORSO...',
-    prev: 'Precedente',
-    next: 'Successivo',
+    pageLabel: 'PAG.',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
     dOrders: 'I MIEI ORDINI',
@@ -66,8 +65,7 @@ const i18n = {
     foundItems: 'dishes found',
     noItems: 'NO DISHES FOUND MATCHING YOUR FILTERS.',
     loading: 'LOADING CATALOG ITEMS...',
-    prev: 'Previous',
-    next: 'Next',
+    pageLabel: 'PAGE',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
     dOrders: 'MY ORDERS',
@@ -187,7 +185,7 @@ async function loadBackendCategories() {
 }
 
 /**
- * 3. CARICA TUTTI I PIATTI DAL SERVER
+ * 3. CARICA TUTTI I PIATTI DAL DATABASE
  */
 async function loadFullCatalog() {
   const grid = document.getElementById('meals-grid');
@@ -202,7 +200,7 @@ async function loadFullCatalog() {
     currentPage = 1;
     updateView();
   } catch (err) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento catalogo piatti.</div>`;
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti.</div>`;
   }
 }
 
@@ -238,7 +236,7 @@ function getFilteredAndSortedMeals() {
 }
 
 /**
- * 5. AGGIORNA GRIGLIA E PAGINAZIONE
+ * 5. AGGIORNA VISTA (GRIGLIA + FRECCE PAGINAZIONE)
  */
 function updateView() {
   const allFiltered = getFilteredAndSortedMeals();
@@ -254,16 +252,15 @@ function updateView() {
     countLabel.textContent = `${totalItems} ${t.foundItems}`;
   }
 
-  // Estrai gli 8 elementi della pagina attiva
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const pageMeals = allFiltered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   renderMealsGrid(pageMeals);
-  renderPaginationControls(totalPages);
+  renderMinimalPagination(totalPages);
 }
 
 /**
- * 6. RENDERING DELLE CARD (CICLATE IN JS)
+ * 6. RENDERING DELLE CARD
  */
 function renderMealsGrid(meals) {
   const grid = document.getElementById('meals-grid');
@@ -291,45 +288,34 @@ function renderMealsGrid(meals) {
 }
 
 /**
- * 7. RENDERING PULSANTI PAGINAZIONE BOOTSTRAP
+ * 7. RENDERING CONTROLLER PAGINAZIONE MINIMALE (FRECCETTE)
  */
-function renderPaginationControls(totalPages) {
+function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
-  if (!container) return;
+  const wrapper = document.getElementById('pagination-wrapper');
+  if (!container || !wrapper) return;
 
   if (totalPages <= 1) {
-    container.innerHTML = '';
+    wrapper.classList.add('d-none');
     return;
   }
 
+  wrapper.classList.remove('d-none');
   const t = i18n[currentLang];
-  let html = '';
+  
+  // Format numero pagina con zero davanti (es. 01 / 32)
+  const currentFormatted = String(currentPage).padStart(2, '0');
+  const totalFormatted = String(totalPages).padStart(2, '0');
 
-  // Tasto Precedente
-  html += `
-    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-      <button class="page-link text-dark rounded-0 border-dark shadow-none" onclick="goToPage(${currentPage - 1})">${t.prev}</button>
-    </li>
+  container.innerHTML = `
+    <button class="page-arrow-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <div class="page-counter-text">${t.pageLabel} ${currentFormatted} / ${totalFormatted}</div>
+    <button class="page-arrow-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+      <i class="bi bi-chevron-right"></i>
+    </button>
   `;
-
-  // Tasti Pagine Numerati
-  for (let i = 1; i <= totalPages; i++) {
-    const isActive = i === currentPage;
-    html += `
-      <li class="page-item ${isActive ? 'active' : ''}">
-        <button class="page-link ${isActive ? 'bg-black border-dark text-white' : 'text-dark border-dark'} rounded-0 shadow-none" onclick="goToPage(${i})">${i}</button>
-      </li>
-    `;
-  }
-
-  // Tasto Successivo
-  html += `
-    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-      <button class="page-link text-dark rounded-0 border-dark shadow-none" onclick="goToPage(${currentPage + 1})">${t.next}</button>
-    </li>
-  `;
-
-  container.innerHTML = html;
 }
 
 function goToPage(page) {
