@@ -1,14 +1,14 @@
 // routes/auth.js
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs'); // Libreria per la cifratura a una via (hashing) delle password
-const jwt = require('jsonwebtoken'); // Libreria per la creazione e verifica dei JSON Web Token
-const User = require('../models/User'); // Modello Mongoose per la collezione 'utente'
-const Meal = require('../models/Meal'); // Modello Mongoose per la collezione 'meals'
-const authMiddleware = require('../middleware/auth'); // Middleware per proteggere le rotte e verificare il JWT
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const Meal = require('../models/Meal');
+const authMiddleware = require('../middleware/auth');
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER: REGISTRAZIONE UTENTE
+// ROTTA 1: REGISTRAZIONE UTENTE (POST /api/auth/register)
 // ============================================================================
 /**
  * @swagger
@@ -47,7 +47,6 @@ const authMiddleware = require('../middleware/auth'); // Middleware per protegge
  *                 example: customer
  *               favoriteCategory:
  *                 type: string
- *                 description: Preferenza piatto per offerte speciali (es. Pasta, Beef, Vegetarian)
  *                 example: Pasta
  *               paymentMethod:
  *                 type: string
@@ -74,10 +73,6 @@ const authMiddleware = require('../middleware/auth'); // Middleware per protegge
  *       500:
  *         description: Errore interno del server
  */
-
-// ============================================================================
-// ROTTA 1: REGISTRAZIONE UTENTE (POST /api/auth/register)
-// ============================================================================
 router.post('/register', async (req, res) => {
   try {
     const { 
@@ -94,25 +89,21 @@ router.post('/register', async (req, res) => {
       IVAnumber 
     } = req.body;
 
-    // 1. Controllo validità campi obbligatori di base
     if (!name || !email || !password) {
       return res.status(400).json({ 
         message: 'Tutti i campi obbligatori (name, email, password) devono essere compilati.' 
       });
     }
 
-    // 2. Controllo duplicati email (normalizzata in minuscolo)
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'Email già presente nel sistema.' });
     }
 
-    // 3. Cifratura password con bcrypt (Salt = 10 round)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 4. Creazione documento Mongoose con tutti i campi del profilo
     const newUser = new User({
       name: name.trim(),
       surname: surname ? surname.trim() : '',
@@ -121,15 +112,14 @@ router.post('/register', async (req, res) => {
       role: role || 'customer',
       favoriteCategory: favoriteCategory || null,
       paymentMethod: paymentMethod || 'carta_credito',
-      restaurantName,
-      restaurantAddress,
-      restaurantPhone,
-      IVAnumber
+      restaurantName: role === 'restaurant' ? (restaurantName || name) : undefined,
+      restaurantAddress: role === 'restaurant' ? (restaurantAddress || 'Via Roma 10, Milano') : undefined,
+      restaurantPhone: role === 'restaurant' ? (restaurantPhone || '') : undefined,
+      IVAnumber: role === 'restaurant' ? (IVAnumber || '') : undefined
     });
 
     await newUser.save();
 
-    // 5. Risposta HTTP 201 Created (escludendo la password)
     res.status(201).json({
       message: 'Registrazione completata con successo.',
       user: {
@@ -138,6 +128,8 @@ router.post('/register', async (req, res) => {
         surname: newUser.surname,
         email: newUser.email,
         role: newUser.role,
+        restaurantName: newUser.restaurantName,
+        restaurantAddress: newUser.restaurantAddress,
         favoriteCategory: newUser.favoriteCategory,
         paymentMethod: newUser.paymentMethod
       }
@@ -150,14 +142,13 @@ router.post('/register', async (req, res) => {
 });
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER: LOGIN UTENTE
+// ROTTA 2: LOGIN UTENTE (POST /api/auth/login)
 // ============================================================================
 /**
  * @swagger
  * /api/auth/login:
  *   post:
  *     summary: Autenticazione utente e rilascio Token JWT
- *     description: Valida email e password cifrata; se corrette, genera un token JWT valido per 24h.
  *     tags: [Autenticazione]
  *     requestBody:
  *       required: true
@@ -183,40 +174,31 @@ router.post('/register', async (req, res) => {
  *       500:
  *         description: Errore interno del server
  */
-
-// ============================================================================
-// ROTTA 2: LOGIN UTENTE (POST /api/auth/login)
-// ============================================================================
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Controllo presenza credenziali
     if (!email || !password) {
       return res.status(400).json({ message: 'Inserisci sia email che password.' });
     }
 
-    // 2. Ricerca utente
     const normalizedEmail = email.toLowerCase().trim();
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(400).json({ message: 'Credenziali non valide.' });
     }
 
-    // 3. Verifica hash password con bcrypt
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Credenziali non valide.' });
     }
 
-    // 4. Generazione Token JWT (con payload { id, role } conforme al middleware)
     const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
+      { id: user._id, role: user.role, name: user.name, restaurantName: user.restaurantName },
+      process.env.JWT_SECRET || 'supersecretkey12345',
       { expiresIn: '24h' }
     );
 
-    // 5. Risposta HTTP 200 OK con Token
     res.status(200).json({
       message: 'Autenticazione riuscita.',
       token,
@@ -226,6 +208,8 @@ router.post('/login', async (req, res) => {
         surname: user.surname,
         email: user.email,
         role: user.role,
+        restaurantName: user.restaurantName,
+        restaurantAddress: user.restaurantAddress,
         favoriteCategory: user.favoriteCategory,
         paymentMethod: user.paymentMethod
       }
@@ -256,7 +240,6 @@ router.post('/login', async (req, res) => {
  */
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    // req.user.id viene iniettato da authMiddleware decodificando il token JWT
     const user = await User.findById(req.user.id).select('-password');
 
     if (!user) {
@@ -294,11 +277,8 @@ router.get('/me', authMiddleware, async (req, res) => {
  *                 type: string
  *               favoriteCategory:
  *                 type: string
- *                 example: Pasta
  *               paymentMethod:
  *                 type: string
- *                 enum: [carta_credito, carta_prepagata, contanti]
- *                 example: carta_credito
  *               restaurantName:
  *                 type: string
  *               restaurantAddress:
@@ -317,24 +297,23 @@ router.put('/me', authMiddleware, async (req, res) => {
   try {
     const { 
       name, 
-      surname,
-      favoriteCategory,
-      paymentMethod,
+      surname, 
+      favoriteCategory, 
+      paymentMethod, 
       restaurantName, 
       restaurantAddress, 
       restaurantPhone, 
       IVAnumber 
     } = req.body;
 
-    // Aggiorna solo i campi anagrafici e preferenze, lasciando intatti email e role
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { 
         $set: { 
           name, 
-          surname,
-          favoriteCategory,
-          paymentMethod,
+          surname, 
+          favoriteCategory, 
+          paymentMethod, 
           restaurantName, 
           restaurantAddress, 
           restaurantPhone, 
@@ -365,7 +344,7 @@ router.put('/me', authMiddleware, async (req, res) => {
  * @swagger
  * /api/auth/me:
  *   delete:
- *     summary: Elimina l'account dell'utente (e ripulisce i piatti custom se ristoratore)
+ *     summary: Elimina l'account dell'utente
  *     tags: [Autenticazione]
  *     security:
  *       - bearerAuth: []
@@ -377,7 +356,6 @@ router.put('/me', authMiddleware, async (req, res) => {
  */
 router.delete('/me', authMiddleware, async (req, res) => {
   try {
-    // Integrità referenziale: se il ristoratore chiude l'account, togliamo i suoi piatti custom
     if (req.user.role === 'restaurant') {
       await Meal.deleteMany({ restaurantId: req.user.id });
     }
@@ -394,27 +372,30 @@ router.delete('/me', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Errore durante l'eliminazione dell'account.", error: error.message });
   }
 });
+
+// ============================================================================
+// ROTTA 6: LISTA PUBBLICA DEI RISTORANTI PARTNER (GET /api/auth/restaurants)
+// ============================================================================
 /**
  * @swagger
- * /auth/restaurants:
+ * /api/auth/restaurants:
  *   get:
- *     summary: Recupera la lista di tutti i ristoranti partner
- *     tags: [Auth]
+ *     summary: Recupera la lista di tutti i ristoranti partner registrati
+ *     tags: [Autenticazione]
  *     responses:
  *       200:
- *         description: Lista ristoranti recuperata con successo
+ *         description: Lista ristoranti partner recuperata con successo
+ *       500:
+ *         description: Errore del server
  */
 router.get('/restaurants', async (req, res) => {
   try {
-    // 1. Cerca nel DB tutti gli utenti registrati con ruolo 'restaurant'
-    // 2. Esclude la password per sicurezza (.select('-password'))
     const restaurants = await User.find({ role: 'restaurant' }).select('-password');
-    
-    // Restituisce l'array JSON
-    res.json(restaurants);
+    res.status(200).json(restaurants);
   } catch (err) {
     console.error("Errore recupero ristoranti:", err);
-    res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti." });
+    res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti.", error: err.message });
   }
 });
+
 module.exports = router;

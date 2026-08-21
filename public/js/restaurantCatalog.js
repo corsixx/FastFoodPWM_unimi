@@ -1,4 +1,4 @@
-// public/js/restaurants.js
+// public/js/restaurantCatalog.js
 
 const ITEMS_PER_PAGE = 8;
 let currentPage = 1;
@@ -13,9 +13,9 @@ const i18n = {
     btn: 'IT 🇮🇹',
     announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
     restTitle: 'I NOSTRI RISTORANTI PARTNER',
-    searchPlaceholder: 'Cerca ristorante o tipologia...',
-    foundItems: 'locali trovati',
-    noItems: 'NESSUN RISTORANTE TROVATO CON I FILTRI SELEZIONATI.',
+    searchPlaceholder: 'Cerca ristorante...',
+    foundItems: 'locali registrati',
+    noItems: 'NESSUN RISTORANTE DISPONIBILE AL MOMENTO.',
     loading: 'CARICAMENTO LOCALI IN CORSO...',
     pageLabel: 'PAG.',
     viewMenuBtn: 'VEDI MENU',
@@ -46,9 +46,9 @@ const i18n = {
     btn: 'EN 🇬🇧',
     announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
     restTitle: 'OUR PARTNER RESTAURANTS',
-    searchPlaceholder: 'Search restaurant or cuisine...',
-    foundItems: 'restaurants found',
-    noItems: 'NO RESTAURANTS FOUND MATCHING YOUR SEARCH.',
+    searchPlaceholder: 'Search restaurant...',
+    foundItems: 'registered restaurants',
+    noItems: 'NO RESTAURANTS AVAILABLE AT THE MOMENT.',
     loading: 'LOADING RESTAURANTS...',
     pageLabel: 'PAGE',
     viewMenuBtn: 'VIEW MENU',
@@ -131,7 +131,7 @@ function renderLanguageUI() {
 }
 
 /**
- * 2. CARICA I RISTORANTI DAL BACKEND (FALLBACK SU LISTA DEFAULT SE NON ANCORA CENSITI)
+ * 2. CARICA I RISTORANTI DA MONGODB (/auth/restaurants)
  */
 async function loadRestaurants() {
   const grid = document.getElementById('restaurants-grid');
@@ -141,29 +141,30 @@ async function loadRestaurants() {
   grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.loading}</div>`;
 
   try {
-    const data = await apiRequest('/restaurants');
-    if (data && Array.isArray(data) && data.length > 0) {
-      rawRestaurantsList = data;
+    const data = await apiRequest('/auth/restaurants');
+    
+    if (data && Array.isArray(data)) {
+      rawRestaurantsList = data.map(r => ({
+        _id: r._id,
+        name: r.name || 'Locale Partner',
+        cuisine: 'PARTNER RESTAURANT',
+        location: r.email || 'Ritiro al Bancone',
+        img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80'
+      }));
     } else {
-      // Fallback ristoranti demo nel mood del locale se non hai ancora un endpoint dedicato
-      rawRestaurantsList = [
-        { _id: '1', name: 'Smash Lab Tokyo', cuisine: 'BURGER & FRIES', location: 'Milano Centro', img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80' },
-        { _id: '2', name: 'Napoletana 5.0', cuisine: 'PIZZA CONTEMPORANEA', location: 'Navigli', img: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80' },
-        { _id: '3', name: 'Ramen Katsu Bar', cuisine: 'JAPANESE STREET FOOD', location: 'Porta Romana', img: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80' },
-        { _id: '4', name: 'Green Poke Studio', cuisine: 'HEALTHY BOWLS', location: 'Isola', img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80' },
-        { _id: '5', name: 'Tacos & Birria Urban', cuisine: 'MEXICAN FOOD', location: 'Città Studi', img: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80' },
-        { _id: '6', name: 'Crunchy Fried Box', cuisine: 'SOUTHERN FRIED CHICKEN', location: 'Lambrate', img: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=800&q=80' }
-      ];
+      rawRestaurantsList = [];
     }
+
     currentPage = 1;
     updateView();
   } catch (err) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore durante il caricamento dei ristoranti.</div>`;
+    console.error('Errore chiamata ristoranti:', err);
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento dati dal database.</div>`;
   }
 }
 
 /**
- * 3. FILTRA I RISTORANTI
+ * 3. FILTRO RICERCA
  */
 function getFilteredRestaurants() {
   let list = [...rawRestaurantsList];
@@ -172,7 +173,6 @@ function getFilteredRestaurants() {
     const term = currentSearch.toLowerCase();
     list = list.filter(r => 
       (r.name && r.name.toLowerCase().includes(term)) ||
-      (r.cuisine && r.cuisine.toLowerCase().includes(term)) ||
       (r.location && r.location.toLowerCase().includes(term))
     );
   }
@@ -181,7 +181,7 @@ function getFilteredRestaurants() {
 }
 
 /**
- * 4. AGGIORNA VISTA E PAGINAZIONE
+ * 4. AGGIORNA PAGINAZIONE E GRIGLIA
  */
 function updateView() {
   const filtered = getFilteredRestaurants();
@@ -205,7 +205,7 @@ function updateView() {
 }
 
 /**
- * 5. RENDERING DELLE CARD RISTORANTE
+ * 5. RENDERING DELLE CARD
  */
 function renderRestaurantsGrid(restaurants) {
   const grid = document.getElementById('restaurants-grid');
@@ -222,11 +222,11 @@ function renderRestaurantsGrid(restaurants) {
     <div class="col-6 col-md-4 col-lg-3">
       <div class="product-card" onclick="goToRestaurantMenu('${r._id}')">
         <div class="product-img-wrapper">
-          <img src="${r.img || 'https://via.placeholder.com/400x500?text=Restaurant'}" alt="${r.name}" loading="lazy">
-          <span class="product-tag">${r.cuisine || 'RESTAURANT'}</span>
+          <img src="${r.img}" alt="${r.name}" loading="lazy">
+          <span class="product-tag">${r.cuisine}</span>
         </div>
         <div class="product-title">${r.name}</div>
-        <div class="product-price">${r.location || 'Official Store'} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span></div>
+        <div class="product-price">${r.location} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span></div>
       </div>
     </div>
   `).join('');
@@ -237,7 +237,7 @@ function goToRestaurantMenu(restaurantId) {
 }
 
 /**
- * 6. RENDERING PAGINAZIONE MINIMALE (FRECCETTE)
+ * 6. CONTROLLO PAGINAZIONE FRECCETTE
  */
 function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
