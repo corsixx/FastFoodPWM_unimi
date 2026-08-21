@@ -362,28 +362,48 @@ function renderCartBadge() {
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
-  const name = localStorage.getItem('userName');
+  const name = localStorage.getItem('userName') || 'Utente';
   const drawerSec = document.getElementById('drawer-user-section');
 
   if (!drawerSec) return;
 
-  const t = i18n[currentLang];
+  const currentLang = localStorage.getItem('appLang') || 'IT';
+  const isIt = currentLang === 'IT';
 
-  if (role === 'restaurant') {
-    const statsLink = document.getElementById('drawer-stats-link');
-    if (statsLink) statsLink.classList.remove('d-none');
+  // Se è un ristorante, rendiamo visibile il link alle statistiche/gestionale
+  const statsLink = document.getElementById('drawer-stats-link');
+  if (statsLink && role === 'restaurant') {
+    statsLink.classList.remove('d-none');
   }
 
   if (token) {
     drawerSec.innerHTML = `
-      <div class="small text-muted mb-1">${t.loggedAs}</div>
-      <div class="fw-bold text-uppercase mb-3">${name || 'Utente'} (${role})</div>
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">${t.logout}</button>
+      <div class="small text-muted mb-1 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+        ${isIt ? 'Accesso effettuato come:' : 'Logged in as:'}
+      </div>
+      <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
+        ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
+      </div>
+
+      <!-- Tasto Vai al Profilo -->
+      <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
+        <i class="bi bi-arrow-right"></i>
+      </a>
+
+      <!-- Tasto Logout -->
+      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
+        ${isIt ? 'Logout' : 'Logout'}
+      </button>
     `;
   } else {
     drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.login}</a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.register}</a>
+      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        ${isIt ? 'Accedi' : 'Login'}
+      </a>
+      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
+        ${isIt ? 'Registrati' : 'Register'}
+      </a>
     `;
   }
 }
