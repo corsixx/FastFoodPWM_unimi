@@ -17,6 +17,7 @@ const i18n = {
     allCat: 'ALL / TUTTO',
     prep: 'prep',
     btnView: 'VEDI',
+    btnViewRecipe: 'VEDI SCHEDA',
     btnCart: '+ CARRELLO',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
@@ -52,6 +53,7 @@ const i18n = {
     allCat: 'ALL',
     prep: 'prep',
     btnView: 'VIEW',
+    btnViewRecipe: 'VIEW RECIPE',
     btnCart: '+ ADD',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
@@ -208,7 +210,7 @@ async function loadBackendCategories() {
 }
 
 /**
- * 4. HELPER CREAZIONE CARD PIATTO (Porta a meal.html su 'VEDI')
+ * 4. HELPER CREAZIONE CARD PIATTO (Con gestione ordinabilità e link a meal.html)
  */
 function createProductCardHtml(meal, prepLabel, customTag = null) {
   const tag = customTag || meal.strCategory || 'MENU';
@@ -219,11 +221,13 @@ function createProductCardHtml(meal, prepLabel, customTag = null) {
   const timeSafe = meal.preparationTime || 10;
   const t = i18n[currentLang];
 
+  const hasRest = meal.restaurantId || meal.restaurant;
+
   return `
     <div class="col-6 col-md-4 col-lg-3">
       <div class="product-card">
         
-        <!-- Immagine cliccabile: porta a meal.html -->
+        <!-- Immagine cliccabile: porta sempre a meal.html -->
         <div class="product-img-wrapper" onclick="goToMealPage('${meal._id}')">
           <img src="${img}" alt="${meal.strMeal || ''}" loading="lazy">
           <span class="product-tag" ${tagStyle}>${tag}</span>
@@ -231,17 +235,26 @@ function createProductCardHtml(meal, prepLabel, customTag = null) {
 
         <div class="product-info-body">
           <div class="product-title">${meal.strMeal || 'Piatto'}</div>
-          <div class="product-price">€ ${priceSafe} &bull; <span class="small">${timeSafe}m ${prepLabel}</span></div>
+          <div class="product-price">
+            € ${priceSafe} 
+            <span class="small text-muted fw-normal">&bull; ${timeSafe}m ${prepLabel}</span>
+          </div>
         </div>
 
-        <!-- ACTION GROUP: VEDI & + CARRELLO -->
+        <!-- BOTTONI AZIONE: DOPPIO TASTO SE ORDINABILE, SINGOLO SE FUORI MENU -->
         <div class="card-action-group">
-          <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${meal._id}')">
-            <i class="bi bi-eye"></i> ${t.btnView}
-          </button>
-          <button type="button" class="btn-card-action btn-card-cart" onclick="addToCart('${meal._id}', '${nameSafe}', ${meal.price || 0})">
-            <i class="bi bi-bag-plus"></i> ${t.btnCart}
-          </button>
+          ${hasRest ? `
+            <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${meal._id}')">
+              <i class="bi bi-eye"></i> ${t.btnView}
+            </button>
+            <button type="button" class="btn-card-action btn-card-cart" onclick="addToCart('${meal._id}', '${nameSafe}', ${meal.price || 0})">
+              <i class="bi bi-bag-plus"></i> ${t.btnCart}
+            </button>
+          ` : `
+            <button type="button" class="btn-card-action btn-card-view w-100" onclick="goToMealPage('${meal._id}')">
+              <i class="bi bi-journal-bookmark"></i> ${t.btnViewRecipe}
+            </button>
+          `}
         </div>
 
       </div>
@@ -260,7 +273,6 @@ async function loadCatalog() {
   const grid = document.getElementById('meals-grid');
   if (!grid) return;
 
-  const t = i18n[currentLang];
   grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'CARICAMENTO IN CORSO...' : 'LOADING ITEMS...'}</div>`;
 
   try {
@@ -272,6 +284,7 @@ async function loadCatalog() {
       return;
     }
 
+    const t = i18n[currentLang];
     grid.innerHTML = meals.slice(0, 16).map(m => createProductCardHtml(m, t.prep)).join('');
   } catch (err) {
     grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti.</div>`;

@@ -204,12 +204,10 @@ router.get('/:id', async (req, res) => {
 
     let meal = null;
 
-    // 1. Cerca per ObjectId MongoDB
     if (mongoose.Types.ObjectId.isValid(id)) {
       meal = await Meal.findById(id).lean();
     }
 
-    // 2. Se non trovato per _id, cerca per idMeal
     if (!meal) {
       meal = await Meal.findOne({ idMeal: id }).lean();
     }
@@ -218,29 +216,27 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: "Piatto non trovato nel catalogo." });
     }
 
-    // 3. Recupera le informazioni del Ristorante associato
-    let restaurantInfo = null;
+    let restData = null;
     const restId = meal.restaurantId || meal.restaurant;
 
     if (restId && mongoose.Types.ObjectId.isValid(restId)) {
-      restaurantInfo = await User.findById(restId).select('restaurantName name restaurantAddress restaurantPhone email').lean();
+      try {
+        restData = await User.findById(restId).select('restaurantName name restaurantAddress restaurantPhone').lean();
+      } catch (e) {
+        // Silenzioso
+      }
     }
 
-    // Se non ha un ristorante esplicito, cerchiamo un ristorante partner di default o casuale
-    if (!restaurantInfo) {
-      restaurantInfo = await User.findOne({ role: 'restaurant' }).select('restaurantName name restaurantAddress restaurantPhone email').lean();
-    }
-
-    // Aggiungiamo l'oggetto restaurant ai dati del piatto
-    meal.restaurant = restaurantInfo ? {
-      _id: restaurantInfo._id,
-      name: restaurantInfo.restaurantName || restaurantInfo.name || 'FastFood Partner Central',
-      address: restaurantInfo.restaurantAddress || 'Ritiro al Bancone Centrale',
-      phone: restaurantInfo.restaurantPhone || ''
+    meal.restaurant = restData ? {
+      _id: restData._id,
+      name: restData.restaurantName || restData.name || 'Ristorante Partner',
+      address: restData.restaurantAddress || 'Ritiro presso il locale',
+      phone: restData.restaurantPhone || ''
     } : null;
 
     res.status(200).json(meal);
   } catch (error) {
+    console.error("Errore recupero piatto:", error);
     res.status(500).json({ message: "Errore nel recupero del piatto.", error: error.message });
   }
 });

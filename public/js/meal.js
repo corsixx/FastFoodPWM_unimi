@@ -13,12 +13,18 @@ const i18n = {
     loading: 'CARICAMENTO DETTAGLI PIATTO...',
     notFound: 'PIATTO NON TROVATO O ID MANCANTE NELL\'URL.',
     prepTime: 'Tempo di preparazione:',
-    ingredientsTitle: 'Descrizione & Ingredienti',
+    ingredientsTitle: 'Ingredienti & Dosi',
+    instructionsTitle: 'Istruzioni & Preparazione',
+    noIngredients: 'Nessuna lista ingredienti dettagliata disponibile.',
+    noInstructions: 'Nessuna istruzione di preparazione disponibile.',
     restaurantTitle: 'PREPARATO DA // RISTORANTE PARTNER',
+    noRestTitle: 'STATO DISPONIBILITÀ // FUORI MENU',
+    noRestNotice: 'Questo piatto fa parte dell\'archivio ricette ma al momento nessun ristorante partner lo ha inserito nel proprio menu d\'asporto.',
     restaurantPickup: 'Indirizzo per il ritiro:',
     viewRestMenu: 'VEDI TUTTI I PIATTI DI QUESTO LOCALE →',
     qtyLabel: 'Quantità',
     btnAddCart: 'AGGIUNGI ALL\'ORDINE',
+    btnUnavailable: 'ATTUALMENTE NON ORDINABILE',
     addedSuccess: 'PIATTO AGGIUNTO AL CARRELLO!',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
@@ -50,12 +56,18 @@ const i18n = {
     loading: 'LOADING MEAL DETAILS...',
     notFound: 'MEAL NOT FOUND OR MISSING ID IN URL.',
     prepTime: 'Preparation time:',
-    ingredientsTitle: 'Description & Ingredients',
+    ingredientsTitle: 'Ingredients & Measures',
+    instructionsTitle: 'Instructions & Cooking',
+    noIngredients: 'No detailed ingredients available.',
+    noInstructions: 'No preparation steps available.',
     restaurantTitle: 'PREPARED BY // PARTNER RESTAURANT',
+    noRestTitle: 'AVAILABILITY // OFF MENU',
+    noRestNotice: 'This dish is part of the recipe catalog, but currently no partner restaurant is serving it for takeout.',
     restaurantPickup: 'Pickup address:',
     viewRestMenu: 'VIEW ALL DISHES FROM THIS RESTAURANT →',
     qtyLabel: 'Quantity',
     btnAddCart: 'ADD TO ORDER',
+    btnUnavailable: 'CURRENTLY NOT ORDERABLE',
     addedSuccess: 'ADDED TO CART!',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
@@ -155,8 +167,39 @@ async function loadMealFromUrl() {
     renderMealDetail(mealData);
   } catch (err) {
     console.error('Errore fetch piatto:', err);
-    container.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore nel recupero del piatto: ${err.message || 'Server non raggiungibile'}</div>`;
+    container.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore nel recupero del piatto.</div>`;
   }
+}
+
+/**
+ * Estrae gli ingredienti formattati da qualsiasi struttura dati
+ */
+function extractIngredientsList(meal) {
+  const items = [];
+
+  // Caso 1: array strutturato ingredients e measures
+  if (Array.isArray(meal.ingredients) && meal.ingredients.length > 0) {
+    meal.ingredients.forEach((ing, idx) => {
+      if (ing && ing.trim() !== '') {
+        const measure = (meal.measures && meal.measures[idx]) ? meal.measures[idx].trim() : '';
+        items.push(measure ? `${ing.trim()} (${measure})` : ing.trim());
+      }
+    });
+  }
+
+  // Caso 2: campi stile TheMealDB (strIngredient1..20 e strMeasure1..20)
+  if (items.length === 0) {
+    for (let i = 1; i <= 20; i++) {
+      const ing = meal[`strIngredient${i}`];
+      const measure = meal[`strMeasure${i}`];
+      if (ing && ing.trim() !== '') {
+        const mText = measure && measure.trim() !== '' ? ` (${measure.trim()})` : '';
+        items.push(`${ing.trim()}${mText}`);
+      }
+    }
+  }
+
+  return items;
 }
 
 function renderMealDetail(meal) {
@@ -169,49 +212,68 @@ function renderMealDetail(meal) {
   const category = meal.strCategory || 'MENU';
   const price = typeof meal.price === 'number' ? meal.price.toFixed(2) : '0.00';
   const prepTime = meal.preparationTime || 10;
-  const desc = meal.strInstructions || 'Nessuna descrizione o ricetta disponibile per questo piatto.';
-  
-  // Informazioni Ristorante
-  const rest = meal.restaurant || {
-    _id: '',
-    name: 'FastFood Partner Locale',
-    address: 'Punto Ritiro al Bancone',
-    phone: ''
-  };
+  const instructions = meal.strInstructions || t.noInstructions;
+
+  const ingredients = extractIngredientsList(meal);
+  const hasRestaurant = meal.restaurant && meal.restaurant._id;
+  const rest = meal.restaurant || null;
+
+  // Render lista ingredienti
+  const ingredientsHtml = ingredients.length > 0
+    ? `<div class="d-flex flex-wrap gap-2 mb-3">
+        ${ingredients.map(ing => `
+          <span class="badge bg-light text-dark border rounded-0 px-2 py-1 small" style="font-weight: 500;">
+            • ${ing}
+          </span>
+        `).join('')}
+      </div>`
+    : `<p class="small text-muted mb-3">${t.noIngredients}</p>`;
 
   container.innerHTML = `
-    <!-- IMMAGINE IN GRANDE -->
+    <!-- IMMAGINE & BOX RISTORANTE -->
     <div class="col-12 col-md-6 col-lg-7">
       <div class="border" style="background-color: var(--ff-gray-bg); overflow: hidden;">
         <img src="${img}" alt="${name}" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;">
       </div>
 
-      <!-- BOX INFORMAZIONI RISTORANTE -->
-      <div class="border border-dark mt-4 p-4 bg-light">
+      <!-- BOX STATO RISTORANTE -->
+      <div class="border border-dark mt-4 p-4 ${hasRestaurant ? 'bg-light' : 'bg-white'}">
         <div class="small fw-bold text-uppercase text-muted mb-1" style="letter-spacing: 0.05em;">
-          ${t.restaurantTitle}
+          ${hasRestaurant ? t.restaurantTitle : t.noRestTitle}
         </div>
-        <h5 class="fw-bold text-uppercase mb-2" style="font-family: 'Space Grotesk', sans-serif;">
-          ${rest.name || 'FastFood Partner'}
-        </h5>
-        <div class="small text-muted mb-2">
-          <i class="bi bi-geo-alt me-1 text-dark"></i> ${t.restaurantPickup} <strong>${rest.address || 'Al Bancone'}</strong>
-          ${rest.phone ? `<span class="ms-3"><i class="bi bi-telephone me-1 text-dark"></i> ${rest.phone}</span>` : ''}
-        </div>
-        ${rest._id ? `
+        
+        ${hasRestaurant ? `
+          <h5 class="fw-bold text-uppercase mb-2" style="font-family: 'Space Grotesk', sans-serif;">
+            ${rest.name}
+          </h5>
+          <div class="small text-muted mb-2">
+            <i class="bi bi-geo-alt me-1 text-dark"></i> ${t.restaurantPickup} <strong>${rest.address}</strong>
+            ${rest.phone ? `<span class="ms-3"><i class="bi bi-telephone me-1 text-dark"></i> ${rest.phone}</span>` : ''}
+          </div>
           <a href="catalog.html?restaurant=${encodeURIComponent(rest._id)}" class="small fw-bold text-dark text-decoration-underline text-uppercase d-inline-block mt-2">
             ${t.viewRestMenu}
           </a>
-        ` : ''}
+        ` : `
+          <p class="small text-muted m-0">
+            <i class="bi bi-info-circle me-1 text-dark"></i> ${t.noRestNotice}
+          </p>
+        `}
       </div>
     </div>
 
-    <!-- SCHEDA INFORMAZIONI E ACQUISTO -->
+    <!-- SCHEDA INFORMAZIONI, INGREDIENTI E ACQUISTO -->
     <div class="col-12 col-md-6 col-lg-5 d-flex flex-column justify-content-between">
       <div>
-        <span class="badge bg-black rounded-0 text-uppercase mb-2 py-1 px-2" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;">
-          ${category}
-        </span>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;">
+            ${category}
+          </span>
+          ${hasRestaurant ? `
+            <span class="badge bg-success rounded-0 text-uppercase py-1 px-2">DISPONIBILE</span>
+          ` : `
+            <span class="badge bg-secondary rounded-0 text-uppercase py-1 px-2">FUORI MENU</span>
+          `}
+        </div>
         
         <h2 class="fw-bold text-uppercase mb-2" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;">
           ${name}
@@ -223,30 +285,45 @@ function renderMealDetail(meal) {
           <i class="bi bi-clock me-1"></i> ${t.prepTime} <strong>${prepTime} min</strong>
         </div>
 
+        <!-- SEZIONE INGREDIENTI -->
         <div class="mb-4">
           <h6 class="fw-bold text-uppercase small mb-2" style="font-family: 'Space Grotesk', sans-serif;">
-            ${t.ingredientsTitle}
+            <i class="bi bi-egg-fried me-1"></i> ${t.ingredientsTitle}
           </h6>
-          <p class="small text-muted" style="line-height: 1.6; white-space: pre-line; max-height: 220px; overflow-y: auto;">
-            ${desc}
+          ${ingredientsHtml}
+        </div>
+
+        <!-- SEZIONE PREPARAZIONE -->
+        <div class="mb-4">
+          <h6 class="fw-bold text-uppercase small mb-2" style="font-family: 'Space Grotesk', sans-serif;">
+            <i class="bi bi-journal-text me-1"></i> ${t.instructionsTitle}
+          </h6>
+          <p class="small text-muted" style="line-height: 1.6; white-space: pre-line; max-height: 180px; overflow-y: auto;">
+            ${instructions}
           </p>
         </div>
       </div>
 
-      <!-- SELETTORE QUANTITÀ & TASTO AGGIUNGI -->
+      <!-- SELETTORE QUANTITÀ & TASTO AGGIUNGI (DISABILITATO SE SENZA RISTORANTE) -->
       <div class="border-top pt-4 mt-auto">
-        <div class="d-flex align-items-center gap-3 mb-3">
-          <span class="small fw-bold text-uppercase">${t.qtyLabel}:</span>
-          <div class="d-flex align-items-center border border-dark">
-            <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(-1)">-</button>
-            <span class="px-3 fw-bold small" id="qty-val">${quantity}</span>
-            <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(1)">+</button>
+        ${hasRestaurant ? `
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <span class="small fw-bold text-uppercase">${t.qtyLabel}:</span>
+            <div class="d-flex align-items-center border border-dark">
+              <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(-1)">-</button>
+              <span class="px-3 fw-bold small" id="qty-val">${quantity}</span>
+              <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(1)">+</button>
+            </div>
           </div>
-        </div>
 
-        <button type="button" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" onclick="addCurrentMealToCart()">
-          <i class="bi bi-bag-plus me-2"></i> ${t.btnAddCart} &bull; € <span id="total-price-btn">${((meal.price || 0) * quantity).toFixed(2)}</span>
-        </button>
+          <button type="button" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" onclick="addCurrentMealToCart()">
+            <i class="bi bi-bag-plus me-2"></i> ${t.btnAddCart} &bull; € <span id="total-price-btn">${((meal.price || 0) * quantity).toFixed(2)}</span>
+          </button>
+        ` : `
+          <button type="button" class="btn btn-secondary rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em; cursor: not-allowed;" disabled>
+            <i class="bi bi-slash-circle me-2"></i> ${t.btnUnavailable}
+          </button>
+        `}
       </div>
 
     </div>
@@ -267,10 +344,10 @@ function changeQuantity(delta) {
 }
 
 function addCurrentMealToCart() {
-  if (!currentMeal) return;
+  if (!currentMeal || !currentMeal.restaurant || !currentMeal.restaurant._id) return;
 
-  const restId = currentMeal.restaurant ? currentMeal.restaurant._id : null;
-  const restName = currentMeal.restaurant ? currentMeal.restaurant.name : 'FastFood Partner';
+  const restId = currentMeal.restaurant._id;
+  const restName = currentMeal.restaurant.name;
 
   const item = cart.find(i => i.mealId === (currentMeal._id || currentMeal.idMeal));
   if (item) {
