@@ -9,6 +9,7 @@ let currentSort = 'default';
 let rawMealsList = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentLang = localStorage.getItem('appLang') || 'IT';
+let mealModalInstance = null;
 
 const i18n = {
   IT: {
@@ -27,6 +28,11 @@ const i18n = {
     noItems: 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.',
     loading: 'CARICAMENTO CATALOGO IN CORSO...',
     pageLabel: 'PAG.',
+    btnView: 'VEDI',
+    btnCart: '+ CARRELLO',
+    modalDesc: 'Descrizione & Ingredienti',
+    modalAdd: 'AGGIUNGI AL CARRELLO',
+    prepTimeLabel: 'Tempo di preparazione:',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
     dOrders: 'I MIEI ORDINI',
@@ -66,6 +72,11 @@ const i18n = {
     noItems: 'NO DISHES FOUND MATCHING YOUR FILTERS.',
     loading: 'LOADING CATALOG ITEMS...',
     pageLabel: 'PAGE',
+    btnView: 'VIEW',
+    btnCart: '+ ADD',
+    modalDesc: 'Description & Ingredients',
+    modalAdd: 'ADD TO CART',
+    prepTimeLabel: 'Preparation time:',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
     dOrders: 'MY ORDERS',
@@ -92,6 +103,11 @@ const i18n = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('modalMealDetail');
+  if (modalEl) {
+    mealModalInstance = new bootstrap.Modal(modalEl);
+  }
+
   renderLanguageUI();
   renderCartBadge();
   loadBackendCategories();
@@ -132,6 +148,9 @@ function renderLanguageUI() {
   setT('opt-sort-price-desc', t.sortPriceDesc);
   setT('opt-sort-time', t.sortTime);
   setT('opt-sort-name', t.sortName);
+
+  setT('txt-modal-desc', t.modalDesc);
+  setT('txt-modal-add', t.modalAdd);
 
   setT('txt-f-service', t.fService);
   setT('txt-f-how', t.fHow);
@@ -236,7 +255,7 @@ function getFilteredAndSortedMeals() {
 }
 
 /**
- * 5. AGGIORNA VISTA (GRIGLIA + FRECCE PAGINAZIONE)
+ * 5. AGGIORNA VISTA E PAGINAZIONE
  */
 function updateView() {
   const allFiltered = getFilteredAndSortedMeals();
@@ -260,7 +279,7 @@ function updateView() {
 }
 
 /**
- * 6. RENDERING DELLE CARD
+ * 6. RENDERING DELLE CARD (CON TASTO VIEW E TASTO CARRELLO SEPARATI)
  */
 function renderMealsGrid(meals) {
   const grid = document.getElementById('meals-grid');
@@ -275,20 +294,68 @@ function renderMealsGrid(meals) {
 
   grid.innerHTML = meals.map(m => `
     <div class="col-6 col-md-4 col-lg-3">
-      <div class="product-card" onclick="addToCart('${m._id}', '${(m.strMeal || 'Piatto').replace(/'/g, "\\'")}', ${m.price || 0})">
-        <div class="product-img-wrapper">
-          <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood'}" alt="${m.strMeal || ''}" loading="lazy">
+      <div class="product-card">
+        
+        <!-- Immagine cliccabile per aprire i dettagli -->
+        <div class="product-img-wrapper" onclick="openMealDetails('${m._id}')">
+          <img src="${m.strMealThumb || 'https://via.placeholder.com/400x300?text=FastFood'}" alt="${m.strMeal || ''}" loading="lazy">
           <span class="product-tag">${m.strCategory || 'MENU'}</span>
         </div>
-        <div class="product-title">${m.strMeal || 'Piatto'}</div>
-        <div class="product-price">€ ${(m.price || 0).toFixed(2)} &bull; <span class="small">${m.preparationTime || 10}m ${t.prep}</span></div>
+
+        <div class="product-info-body">
+          <div class="product-title">${m.strMeal || 'Piatto'}</div>
+          <div class="product-price">€ ${(m.price || 0).toFixed(2)} <span class="small text-muted fw-normal">&bull; ${m.preparationTime || 10}m ${t.prep}</span></div>
+        </div>
+
+        <!-- ACTION GROUP: TASTO VEDI E TASTO CARRELLO -->
+        <div class="card-action-group">
+          <button class="btn-card-action btn-card-view" onclick="openMealDetails('${m._id}')">
+            <i class="bi bi-eye"></i> ${t.btnView}
+          </button>
+          <button class="btn-card-action btn-card-cart" onclick="addToCart('${m._id}', '${(m.strMeal || 'Piatto').replace(/'/g, "\\'")}', ${m.price || 0})">
+            <i class="bi bi-bag-plus"></i> ${t.btnCart}
+          </button>
+        </div>
+
       </div>
     </div>
   `).join('');
 }
 
 /**
- * 7. RENDERING CONTROLLER PAGINAZIONE MINIMALE (FRECCETTE)
+ * 7. APRE LA MODALE DI DETTAGLIO PIATTO (VIEW)
+ */
+function openMealDetails(mealId) {
+  const meal = rawMealsList.find(m => m._id === mealId);
+  if (!meal) return;
+
+  const t = i18n[currentLang];
+
+  document.getElementById('modal-meal-name').textContent = meal.strMeal || 'DETTAGLIO PIATTO';
+  document.getElementById('modal-meal-title').textContent = meal.strMeal || 'Piatto';
+  document.getElementById('modal-meal-category').textContent = meal.strCategory || 'MENU';
+  document.getElementById('modal-meal-price').textContent = `€ ${(meal.price || 0).toFixed(2)}`;
+  document.getElementById('modal-meal-img').src = meal.strMealThumb || 'https://via.placeholder.com/400x300?text=FastFood';
+  
+  document.getElementById('modal-meal-time').innerHTML = `
+    <i class="bi bi-clock me-1"></i> ${t.prepTimeLabel} <strong>${meal.preparationTime || 10} min</strong>
+  `;
+
+  document.getElementById('modal-meal-desc').textContent = meal.strInstructions || 'Nessuna descrizione o ingrediente disponibile.';
+
+  const btnAdd = document.getElementById('modal-btn-add-cart');
+  btnAdd.onclick = () => {
+    addToCart(meal._id, meal.strMeal || 'Piatto', meal.price || 0);
+    if (mealModalInstance) mealModalInstance.hide();
+  };
+
+  if (mealModalInstance) {
+    mealModalInstance.show();
+  }
+}
+
+/**
+ * 8. RENDERING CONTROLLER PAGINAZIONE MINIMALE (FRECCETTE)
  */
 function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
@@ -303,7 +370,6 @@ function renderMinimalPagination(totalPages) {
   wrapper.classList.remove('d-none');
   const t = i18n[currentLang];
   
-  // Format numero pagina con zero davanti (es. 01 / 32)
   const currentFormatted = String(currentPage).padStart(2, '0');
   const totalFormatted = String(totalPages).padStart(2, '0');
 
@@ -325,7 +391,7 @@ function goToPage(page) {
 }
 
 /**
- * 8. HANDLERS EVENTI
+ * 9. HANDLERS EVENTI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
@@ -347,7 +413,7 @@ function handleSort(val) {
 }
 
 /**
- * 9. CARRELLO
+ * 10. CARRELLO
  */
 function addToCart(mealId, name, price) {
   const item = cart.find(i => i.mealId === mealId);
@@ -371,7 +437,7 @@ function renderCartBadge() {
 }
 
 /**
- * 10. SCORRIMENTO BARRA CATEGORIE
+ * 11. SCORRIMENTO BARRA CATEGORIE
  */
 function setupBarMovement() {
   const slider = document.querySelector('.categories-bar-wrapper');
@@ -407,7 +473,7 @@ function setupBarMovement() {
 }
 
 /**
- * 11. STATO DRAWER UTENTE
+ * 12. STATO DRAWER UTENTE
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');

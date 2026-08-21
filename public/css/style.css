@@ -142,7 +142,7 @@ body {
   color: var(--ff-white);
 }
 
-/* HERO LOOKBOOK */
+/* HERO LOOKBOOK (ORIGINALE RIPRISTINATO) */
 .hero-lookbook {
   display: flex;
   width: 100%;
@@ -150,6 +150,7 @@ body {
   min-height: 460px;
   overflow: hidden;
   border-bottom: 1px solid var(--ff-border);
+  position: relative;
 }
 
 .lookbook-panel {
@@ -234,8 +235,10 @@ body {
 
 /* PRODUCT CARDS */
 .product-card {
-  cursor: pointer;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .product-img-wrapper {
@@ -244,12 +247,18 @@ body {
   aspect-ratio: 3/4;
   overflow: hidden;
   margin-bottom: 0.5rem;
+  cursor: pointer;
 }
 
 .product-img-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.product-img-wrapper:hover img {
+  transform: scale(1.03);
 }
 
 .product-tag {
@@ -266,6 +275,11 @@ body {
   letter-spacing: 0.05em;
 }
 
+.product-info-body {
+  flex-grow: 1;
+  margin-bottom: 0.4rem;
+}
+
 .product-title {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.82rem;
@@ -277,6 +291,52 @@ body {
 .product-price {
   font-size: 0.8rem;
   color: var(--ff-gray-text);
+}
+
+/* PULSANTI AZIONE DOPPI (VEDI / + CARRELLO) */
+.card-action-group {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: auto;
+}
+
+.btn-card-action {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0;
+  transition: all 0.15s ease;
+  flex: 1;
+  text-align: center;
+  border: 1px solid var(--ff-black);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.btn-card-view {
+  background-color: transparent;
+  color: var(--ff-black);
+}
+
+.btn-card-view:hover {
+  background-color: var(--ff-gray-bg);
+}
+
+.btn-card-cart {
+  background-color: var(--ff-black);
+  color: var(--ff-white);
+}
+
+.btn-card-cart:hover {
+  background-color: var(--ff-yellow);
+  color: var(--ff-black);
+  border-color: var(--ff-yellow);
 }
 
 /* PAGINAZIONE MINIMALE & STILIZZATA */

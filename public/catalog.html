@@ -88,7 +88,7 @@
 
       </div>
 
-      <!-- GRIGLIA PRODOTTI PAGINATA -->
+      <!-- GRIGLIA PRODOTTI PAGINATA (CON TASTI VIEW & CARRELLO) -->
       <div class="row g-3 g-md-4" id="meals-grid"></div>
 
       <!-- CONTROLLO PAGINAZIONE MINIMALE CON FRECCETTE -->
@@ -97,6 +97,45 @@
       </div>
 
     </main>
+
+    <!-- MODALE DETTAGLIO PIATTO (VIEW) -->
+    <div class="modal fade" id="modalMealDetail" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="modal-meal-name">DETTAGLI PIATTO</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="row g-4">
+              <div class="col-12 col-md-6">
+                <img id="modal-meal-img" src="" alt="Piatto" class="img-fluid border" style="width: 100%; aspect-ratio: 4/3; object-fit: cover;">
+              </div>
+              <div class="col-12 col-md-6 d-flex flex-column justify-content-between">
+                <div>
+                  <span class="badge bg-black rounded-0 text-uppercase mb-2" id="modal-meal-category">CATEGORIA</span>
+                  <h4 class="fw-bold text-uppercase mb-1" id="modal-meal-title">NOME PIATTO</h4>
+                  <div class="fs-5 fw-bold mb-3" id="modal-meal-price">€ 0.00</div>
+                  
+                  <div class="small text-muted mb-3" id="modal-meal-time">
+                    <i class="bi bi-clock me-1"></i> Tempo di preparazione: <strong>10 min</strong>
+                  </div>
+
+                  <h6 class="fw-bold text-uppercase small border-bottom pb-1 mb-2" id="txt-modal-desc">Descrizione & Ingredienti</h6>
+                  <p class="small text-muted" id="modal-meal-desc" style="max-height: 160px; overflow-y: auto;">-</p>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex gap-2">
+                  <button type="button" class="btn btn-dark rounded-0 w-100 py-2 fw-bold text-uppercase" id="modal-btn-add-cart">
+                    <i class="bi bi-bag-plus me-1"></i> <span id="txt-modal-add">AGGIUNGI AL CARRELLO</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 4. FOOTER -->
     <footer class="main-footer">
@@ -132,7 +171,7 @@
       </div>
     </footer>
 
-    <!-- MODALI RAPIDE -->
+    <!-- MODALI DI SERVIZIO -->
     <div class="modal fade" id="modalInfo" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 border-dark">
@@ -182,6 +221,6 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/api.js"></script>
-    <script src="js/restaurantCatalog.js"></script>
+    <script src="js/catalog.js"></script>
   </body>
 </html>

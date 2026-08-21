@@ -13,10 +13,10 @@ const i18n = {
     btn: 'IT 🇮🇹',
     announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
     restTitle: 'I NOSTRI RISTORANTI PARTNER',
-    searchPlaceholder: 'Cerca ristorante...',
+    searchPlaceholder: 'Cerca ristorante, cucina o indirizzo...',
     foundItems: 'locali registrati',
-    noItems: 'NESSUN RISTORANTE DISPONIBILE AL MOMENTO.',
-    loading: 'CARICAMENTO LOCALI IN CORSO...',
+    noItems: 'NESSUN RISTORANTE TROVATO CON I FILTRI SELEZIONATI.',
+    loading: 'CARICAMENTO LOCALI DA MONGODB...',
     pageLabel: 'PAG.',
     viewMenuBtn: 'VEDI MENU',
     dCatalog: 'CATALOGO COMPLETO',
@@ -30,26 +30,24 @@ const i18n = {
     fService: 'SERVIZIO',
     fHow: 'Come Ordinare',
     fPickup: 'Ritiro al Bancone',
-    fWait: 'Tempi di Attesa',
     fPartner: 'PARTNER',
     fJoin: 'Diventa un Ristorante Partner',
     fManage: 'Accedi al Gestionale',
     fSupport: 'SUPPORTO',
     fContact: 'Contatta Assistenza',
-    fChat: 'Chat 24/7 Attiva',
     mInfoTitle: 'Informazioni Servizio',
-    mInfoBody: 'Scegli il tuo ristorante preferito per visualizzare solo il suo catalogo piatti ed ordinare senza attese.',
+    mInfoBody: 'Scegli il tuo ristorante partner preferito ed esplora il suo menu esclusivo con ritiro senza code.',
     mLegalTitle: 'Termini & Note Legali',
-    mLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
+    mLegalBody: 'Piattaforma protetta con autenticazione JWT e gestione ordini in tempo reale su database.'
   },
   EN: {
     btn: 'EN 🇬🇧',
     announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
     restTitle: 'OUR PARTNER RESTAURANTS',
-    searchPlaceholder: 'Search restaurant...',
+    searchPlaceholder: 'Search restaurant, cuisine or address...',
     foundItems: 'registered restaurants',
-    noItems: 'NO RESTAURANTS AVAILABLE AT THE MOMENT.',
-    loading: 'LOADING RESTAURANTS...',
+    noItems: 'NO RESTAURANTS FOUND MATCHING YOUR SEARCH.',
+    loading: 'LOADING RESTAURANTS FROM MONGODB...',
     pageLabel: 'PAGE',
     viewMenuBtn: 'VIEW MENU',
     dCatalog: 'FULL CATALOG',
@@ -63,17 +61,15 @@ const i18n = {
     fService: 'SERVICE',
     fHow: 'How to Order',
     fPickup: 'Counter Pickup',
-    fWait: 'Wait Times',
     fPartner: 'PARTNER',
     fJoin: 'Become a Partner Restaurant',
     fManage: 'Access Dashboard',
     fSupport: 'SUPPORT',
     fContact: 'Contact Support',
-    fChat: '24/7 Chat Active',
     mInfoTitle: 'Service Information',
-    mInfoBody: 'Choose your favorite restaurant to explore their dedicated menu and order without waiting in line.',
+    mInfoBody: 'Choose your favorite partner restaurant and explore their exclusive menu for express pickup.',
     mLegalTitle: 'Terms & Legal Notes',
-    mLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in database.'
+    mLegalBody: 'Secure platform protected by JWT authentication and real-time database orders.'
   }
 };
 
@@ -85,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * 1. CAMBIO LINGUA
+ * 1. GESTIONE LINGUA
  */
 function toggleLanguage() {
   currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
@@ -112,13 +108,11 @@ function renderLanguageUI() {
   setT('txt-f-service', t.fService);
   setT('txt-f-how', t.fHow);
   setT('txt-f-pickup', t.fPickup);
-  setT('txt-f-wait', t.fWait);
   setT('txt-f-partner', t.fPartner);
   setT('txt-f-join', t.fJoin);
   setT('txt-f-manage', t.fManage);
   setT('txt-f-support', t.fSupport);
   setT('txt-f-contact', t.fContact);
-  setT('txt-f-chat', t.fChat);
   setT('txt-m-info-title', t.mInfoTitle);
   setT('txt-m-info-body', t.mInfoBody);
   setT('txt-m-legal-title', t.mLegalTitle);
@@ -131,7 +125,7 @@ function renderLanguageUI() {
 }
 
 /**
- * 2. CARICA I RISTORANTI DA MONGODB (/auth/restaurants)
+ * 2. CARICA I RISTORANTI DAL BACKEND
  */
 async function loadRestaurants() {
   const grid = document.getElementById('restaurants-grid');
@@ -142,14 +136,15 @@ async function loadRestaurants() {
 
   try {
     const data = await apiRequest('/auth/restaurants');
-    
+
     if (data && Array.isArray(data)) {
       rawRestaurantsList = data.map(r => ({
         _id: r._id,
-        name: r.name || 'Locale Partner',
-        cuisine: 'PARTNER RESTAURANT',
-        location: r.email || 'Ritiro al Bancone',
-        img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80'
+        name: r.name || r.restaurantName || 'Ristorante Partner',
+        cuisine: r.cuisine || 'PARTNER RESTAURANT',
+        location: r.location || r.restaurantAddress || 'Ritiro al Bancone',
+        phone: r.phone || r.restaurantPhone || '',
+        img: r.img || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
       }));
     } else {
       rawRestaurantsList = [];
@@ -164,16 +159,17 @@ async function loadRestaurants() {
 }
 
 /**
- * 3. FILTRO RICERCA
+ * 3. FILTRA RICERCA
  */
 function getFilteredRestaurants() {
   let list = [...rawRestaurantsList];
 
   if (currentSearch) {
     const term = currentSearch.toLowerCase();
-    list = list.filter(r => 
+    list = list.filter(r =>
       (r.name && r.name.toLowerCase().includes(term)) ||
-      (r.location && r.location.toLowerCase().includes(term))
+      (r.location && r.location.toLowerCase().includes(term)) ||
+      (r.cuisine && r.cuisine.toLowerCase().includes(term))
     );
   }
 
@@ -181,7 +177,7 @@ function getFilteredRestaurants() {
 }
 
 /**
- * 4. AGGIORNA PAGINAZIONE E GRIGLIA
+ * 4. AGGIORNA VISTA E PAGINAZIONE
  */
 function updateView() {
   const filtered = getFilteredRestaurants();
@@ -205,7 +201,7 @@ function updateView() {
 }
 
 /**
- * 5. RENDERING DELLE CARD
+ * 5. RENDERING DELLE CARD RISTORANTE
  */
 function renderRestaurantsGrid(restaurants) {
   const grid = document.getElementById('restaurants-grid');
@@ -223,7 +219,7 @@ function renderRestaurantsGrid(restaurants) {
       <div class="product-card" onclick="goToRestaurantMenu('${r._id}')">
         <div class="product-img-wrapper">
           <img src="${r.img}" alt="${r.name}" loading="lazy">
-          <span class="product-tag">${r.cuisine}</span>
+          <span class="product-tag">${r.cuisine.toUpperCase()}</span>
         </div>
         <div class="product-title">${r.name}</div>
         <div class="product-price">${r.location} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span></div>
@@ -237,7 +233,7 @@ function goToRestaurantMenu(restaurantId) {
 }
 
 /**
- * 6. CONTROLLO PAGINAZIONE FRECCETTE
+ * 6. CONTROLLO PAGINAZIONE A FRECCETTE MINIMALE
  */
 function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
@@ -251,7 +247,7 @@ function renderMinimalPagination(totalPages) {
 
   wrapper.classList.remove('d-none');
   const t = i18n[currentLang];
-  
+
   const currentFormatted = String(currentPage).padStart(2, '0');
   const totalFormatted = String(totalPages).padStart(2, '0');
 
@@ -285,7 +281,7 @@ function renderCartBadge() {
 }
 
 /**
- * 7. STATO UTENTE NEL DRAWER
+ * 7. GESTIONE AUTENTICAZIONE NEL DRAWER
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
