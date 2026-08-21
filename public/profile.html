@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood // Profilo Utente</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+      /* Stile Carta di Credito Live */
+      .credit-card-preview {
+        background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);
+        color: #ffffff;
+        border-radius: 12px;
+        padding: 24px;
+        position: relative;
+        min-height: 200px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        font-family: 'Space Grotesk', monospace;
+      }
+      .card-chip {
+        width: 40px;
+        height: 28px;
+        background: linear-gradient(135deg, #d4af37 0%, #aa8c2c 100%);
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+      .card-brand-icon {
+        font-size: 1.8rem;
+        font-weight: bold;
+        letter-spacing: 0.05em;
+      }
+      .card-number-live {
+        font-size: 1.25rem;
+        letter-spacing: 3px;
+        word-spacing: 4px;
+        margin-bottom: 18px;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- 1. TOP ANNOUNCEMENT BAR -->
+    <div class="top-bar text-center" id="txt-announcement">
+      Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
+    </div>
+
+    <!-- 2. HEADER -->
+    <header class="main-header">
+      <div class="container-fluid px-3 px-md-4 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <a href="index.html" class="brand-logo">FastFood</a>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <button class="lang-switch-btn" id="lang-btn" onclick="toggleLanguage()">
+              IT 🇮🇹
+            </button>
+
+            <a href="orders.html" class="header-tools-link position-relative">
+              <i class="bi bi-box-seam fs-5"></i>
+              <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-black" style="font-size: 0.6rem;">0</span>
+            </a>
+
+            <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
+              <i class="bi bi-list fs-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. CONTENUTO PROFILO -->
+    <main class="container py-5" style="max-width: 680px; min-height: 65vh;">
+      
+      <!-- SCHEDA 1: DATI ANAGRAFICI -->
+      <div class="border border-dark p-4 p-md-5 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+          <div>
+            <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-2" id="txt-badge-profile">AREA PERSONALE</span>
+            <h3 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;" id="txt-profile-title">
+              GESTISCI PROFILO
+            </h3>
+          </div>
+          <span id="user-role-badge" class="badge bg-secondary rounded-0 text-uppercase px-3 py-2">...</span>
+        </div>
+
+        <div id="profile-alert" class="alert rounded-0 small d-none py-2 px-3 mb-4"></div>
+
+        <form id="profile-form" onsubmit="handleProfileUpdate(event)">
+          <div class="mb-3">
+            <label for="name" class="form-label small fw-bold text-uppercase" id="lbl-name">Nome Completo / Referente</label>
+            <input type="text" class="form-control rounded-0 border-dark shadow-none" id="name" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label small fw-bold text-uppercase" id="lbl-email">Indirizzo Email</label>
+            <input type="email" class="form-control rounded-0 border-dark shadow-none" id="email" required>
+          </div>
+
+          <!-- Solo Clienti -->
+          <div id="customer-profile-fields" class="mb-4 d-none">
+            <label for="favoriteCategory" class="form-label small fw-bold text-uppercase" id="lbl-fav-cat">Piatto/Cucina Preferita (Bacheca)</label>
+            <select id="favoriteCategory" class="form-select rounded-0 border-dark shadow-none">
+              <option value="" id="opt-fav-none">Nessuna preferenza specifica</option>
+              <option value="Beef">Beef / Manzo</option>
+              <option value="Chicken">Chicken / Pollo</option>
+              <option value="Dessert">Dessert / Dolci</option>
+              <option value="Pasta">Pasta</option>
+              <option value="Seafood">Seafood / Pesce</option>
+              <option value="Vegetarian">Vegetarian / Vegetariano</option>
+            </select>
+          </div>
+
+          <!-- Solo Ristoranti -->
+          <div id="restaurant-profile-fields" class="d-none">
+            <div class="mb-3">
+              <label for="restaurantName" class="form-label small fw-bold text-uppercase" id="lbl-rest-name">Nome del Locale / Ristorante</label>
+              <input type="text" class="form-control rounded-0 border-dark shadow-none" id="restaurantName">
+            </div>
+
+            <div class="mb-3">
+              <label for="restaurantAddress" class="form-label small fw-bold text-uppercase" id="lbl-rest-addr">Indirizzo Ritiro Asporto</label>
+              <input type="text" class="form-control rounded-0 border-dark shadow-none" id="restaurantAddress">
+            </div>
+
+            <div class="mb-4">
+              <label for="restaurantPhone" class="form-label small fw-bold text-uppercase" id="lbl-rest-phone">Recapito Telefonico</label>
+              <input type="tel" class="form-control rounded-0 border-dark shadow-none" id="restaurantPhone">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" id="btn-save-profile">
+            SALVA MODIFICHE
+          </button>
+        </form>
+      </div>
+
+      <!-- SCHEDA 2: METODI DI PAGAMENTO INTERATTIVI (Solo Clienti) -->
+      <div id="payment-methods-card" class="border border-dark p-4 p-md-5 bg-white mb-4 d-none">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;" id="txt-pay-title">
+            METODO DI PAGAMENTO
+          </h5>
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" id="card-type-badge">CARD</span>
+        </div>
+        <p class="small text-muted mb-4" id="txt-pay-sub">
+          Inserisci o aggiorna la tua carta con rilevamento automatico del circuito.
+        </p>
+
+        <div id="payment-alert" class="alert rounded-0 small d-none py-2 px-3 mb-4"></div>
+
+        <!-- ANTEPRIMA CARTA VIRTUALE LIVE -->
+        <div class="credit-card-preview mb-4">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="card-chip"></div>
+            <div class="card-brand-icon" id="live-card-brand">
+              <i class="bi bi-credit-card-2-front"></i>
+            </div>
+          </div>
+          
+          <div class="card-number-live font-monospace" id="live-card-num">
+            •••• •••• •••• ••••
+          </div>
+
+          <div class="d-flex justify-content-between align-items-end">
+            <div>
+              <div class="small text-muted" style="font-size: 0.65rem; text-transform: uppercase;">CARD HOLDER</div>
+              <div class="fw-bold text-uppercase" id="live-card-holder" style="font-size: 0.85rem; letter-spacing: 0.05em;">NOME COGNOME</div>
+            </div>
+            <div class="text-end">
+              <div class="small text-muted" style="font-size: 0.65rem; text-transform: uppercase;">EXPIRES</div>
+              <div class="fw-bold font-monospace" id="live-card-exp" style="font-size: 0.85rem;">MM/AA</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FORM COMPILAZIONE CARTA -->
+        <form id="payment-form" onsubmit="handlePaymentSave(event)">
+          <div class="mb-3">
+            <label for="cardHolder" class="form-label small fw-bold text-uppercase" id="lbl-card-holder">Intestatario Carta</label>
+            <input type="text" class="form-control rounded-0 border-dark shadow-none" id="cardHolder" placeholder="MARIO ROSSI" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="cardNumber" class="form-label small fw-bold text-uppercase" id="lbl-card-num">Numero Carta</label>
+            <div class="input-group">
+              <input type="text" class="form-control rounded-0 border-dark shadow-none font-monospace" id="cardNumber" placeholder="4532 •••• •••• ••••" maxlength="19" required>
+              <span class="input-group-text rounded-0 border-dark bg-white" id="brand-addon-icon"><i class="bi bi-credit-card"></i></span>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-4">
+            <div class="col-6">
+              <label for="cardExpiry" class="form-label small fw-bold text-uppercase" id="lbl-card-exp">Scadenza (MM/AA)</label>
+              <input type="text" class="form-control rounded-0 border-dark shadow-none font-monospace" id="cardExpiry" placeholder="12/28" maxlength="5" required>
+            </div>
+            <div class="col-6">
+              <label for="cardCvv" class="form-label small fw-bold text-uppercase" id="lbl-card-cvv">CVV</label>
+              <input type="password" class="form-control rounded-0 border-dark shadow-none font-monospace" id="cardCvv" placeholder="123" maxlength="4" required>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-dark rounded-0 flex-grow-1 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif;" id="btn-save-card">
+              SALVA CARTA
+            </button>
+            <button type="button" class="btn btn-outline-danger rounded-0 px-3 d-none" id="btn-remove-card" onclick="removeSavedPaymentMethod()">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- SCHEDA 3: SICUREZZA / PASSWORD -->
+      <div class="border border-dark p-4 p-md-5 bg-white">
+        <h5 class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;" id="txt-pwd-title">
+          SICUREZZA & PASSWORD
+        </h5>
+        
+        <div id="pwd-alert" class="alert rounded-0 small d-none py-2 px-3 mb-3"></div>
+
+        <form id="password-form" onsubmit="handlePasswordUpdate(event)">
+          <div class="mb-3">
+            <label for="currentPassword" class="form-label small fw-bold text-uppercase" id="lbl-curr-pwd">Password Attuale</label>
+            <div class="input-group">
+              <input type="password" class="form-control rounded-0 border-dark shadow-none" id="currentPassword" required placeholder="••••••••">
+              <button class="btn btn-outline-dark rounded-0 border-dark px-3" type="button" onclick="togglePasswordVisibility('currentPassword', 'icon-curr')">
+                <i class="bi bi-eye" id="icon-curr"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="newPassword" class="form-label small fw-bold text-uppercase" id="lbl-new-pwd">Nuova Password (min. 6 caratteri)</label>
+            <div class="input-group">
+              <input type="password" class="form-control rounded-0 border-dark shadow-none" id="newPassword" required placeholder="••••••••" minlength="6">
+              <button class="btn btn-outline-dark rounded-0 border-dark px-3" type="button" onclick="togglePasswordVisibility('newPassword', 'icon-new')">
+                <i class="bi bi-eye" id="icon-new"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-outline-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" id="btn-save-pwd">
+            AGGIORNA PASSWORD
+          </button>
+        </form>
+      </div>
+
+    </main>
+
+    <!-- 4. FOOTER -->
+    <footer class="main-footer mt-5">
+      <div class="container-fluid px-3 px-md-4">
+        <div class="row g-4">
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-service">SERVIZIO</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-how">Come Ordinare</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-pickup">Ritiro al Bancone</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-partner">PARTNER</div>
+            <a href="register.html" class="footer-link" id="txt-f-join">Diventa un Ristorante Partner</a>
+            <a href="login.html" class="footer-link" id="txt-f-manage">Accedi al Gestionale</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-support">SUPPORTO</div>
+            <a href="mailto:support@fastfood.local" class="footer-link" id="txt-f-contact">Contatta Assistenza</a>
+            <span class="footer-link text-muted" id="txt-f-chat">Chat 24/7 Attiva</span>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-legal">LEGAL</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal" id="txt-f-terms">Privacy & Termini</a>
+            <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- MODALI -->
+    <div class="modal fade" id="modalInfo" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-info-title">Informazioni Servizio</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-info-body">
+            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalLegal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-legal-title">Termini & Note Legali</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-legal-body">
+            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. OFFCANVAS DRAWER -->
+    <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
+      <div class="offcanvas-header justify-content-end pb-0">
+        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
+        <div>
+          <a href="catalog.html" class="drawer-nav-item"><span id="txt-d-catalog">CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="restaurantCatalog.html" class="drawer-nav-item"><span id="txt-d-restaurants">I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="orders.html" class="drawer-nav-item"><span id="txt-d-orders">I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link"><span id="txt-d-stats">STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
+        </div>
+        <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
+      </div>
+    </div>
+
+    <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/profile.js"></script>
+  </body>
+</html>
