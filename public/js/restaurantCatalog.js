@@ -76,6 +76,7 @@ const i18n = {
 document.addEventListener('DOMContentLoaded', () => {
   renderLanguageUI();
   renderCartBadge();
+  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
   loadRestaurants();
   renderDrawerAuth();
 });
@@ -132,7 +133,7 @@ async function loadRestaurants() {
   if (!grid) return;
 
   const t = i18n[currentLang];
-  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.loading}</div>`;
+  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm me-2"></div>${t.loading}</div>`;
 
   try {
     const data = await apiRequest('/auth/restaurants');
@@ -140,10 +141,11 @@ async function loadRestaurants() {
     if (data && Array.isArray(data)) {
       rawRestaurantsList = data.map(r => ({
         _id: r._id,
-        name: r.name || r.restaurantName || 'Ristorante Partner',
-        cuisine: r.cuisine || 'PARTNER RESTAURANT',
-        location: r.location || r.restaurantAddress || 'Ritiro al Bancone',
-        phone: r.phone || r.restaurantPhone || '',
+        // Dà priorità assoluta al nome del locale
+        restaurantName: r.restaurantName || r.name || 'Ristorante Partner',
+        cuisine: r.cuisineType || r.cuisine || 'PARTNER RESTAURANT',
+        location: r.restaurantAddress || r.location || r.address || 'Ritiro al Bancone',
+        phone: r.restaurantPhone || r.phone || '',
         img: r.img || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
       }));
     } else {
@@ -167,7 +169,7 @@ function getFilteredRestaurants() {
   if (currentSearch) {
     const term = currentSearch.toLowerCase();
     list = list.filter(r =>
-      (r.name && r.name.toLowerCase().includes(term)) ||
+      (r.restaurantName && r.restaurantName.toLowerCase().includes(term)) ||
       (r.location && r.location.toLowerCase().includes(term)) ||
       (r.cuisine && r.cuisine.toLowerCase().includes(term))
     );
@@ -216,20 +218,24 @@ function renderRestaurantsGrid(restaurants) {
 
   grid.innerHTML = restaurants.map(r => `
     <div class="col-6 col-md-4 col-lg-3">
-      <div class="product-card" onclick="goToRestaurantMenu('${r._id}')">
+      <div class="product-card cursor-pointer" onclick="goToRestaurantMenu('${r._id}')">
         <div class="product-img-wrapper">
-          <img src="${r.img}" alt="${r.name}" loading="lazy">
+          <img src="${r.img}" alt="${r.restaurantName}" loading="lazy">
           <span class="product-tag">${r.cuisine.toUpperCase()}</span>
         </div>
-        <div class="product-title">${r.name}</div>
-        <div class="product-price">${r.location} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span></div>
+        <div class="product-info-body">
+          <div class="product-title">${r.restaurantName}</div>
+          <div class="product-price">
+            ${r.location} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span>
+          </div>
+        </div>
       </div>
     </div>
   `).join('');
 }
 
 function goToRestaurantMenu(restaurantId) {
-  window.location.href = `catalog.html?restaurant=${encodeURIComponent(restaurantId)}`;
+  window.location.href = `restaurantDetail.html?id=${encodeURIComponent(restaurantId)}`;
 }
 
 /**
@@ -275,6 +281,7 @@ function handleSearch(val) {
 }
 
 function renderCartBadge() {
+  cart = JSON.parse(localStorage.getItem('cart')) || [];
   const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
   const badge = document.getElementById('cart-badge');
   if (badge) badge.textContent = count;
@@ -294,7 +301,6 @@ function renderDrawerAuth() {
   const currentLang = localStorage.getItem('appLang') || 'IT';
   const isIt = currentLang === 'IT';
 
-  // Se è un ristorante, rendiamo visibile il link alle statistiche/gestionale
   const statsLink = document.getElementById('drawer-stats-link');
   if (statsLink && role === 'restaurant') {
     statsLink.classList.remove('d-none');
@@ -309,13 +315,11 @@ function renderDrawerAuth() {
         ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
       </div>
 
-      <!-- Tasto Vai al Profilo -->
       <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
         <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
         <i class="bi bi-arrow-right"></i>
       </a>
 
-      <!-- Tasto Logout -->
       <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
         ${isIt ? 'Logout' : 'Logout'}
       </button>
