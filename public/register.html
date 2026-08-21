@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood // Registrazione</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+
+    <!-- 1. TOP ANNOUNCEMENT BAR -->
+    <div class="top-bar text-center" id="txt-announcement">
+      Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
+    </div>
+
+    <!-- 2. HEADER -->
+    <header class="main-header">
+      <div class="container-fluid px-3 px-md-4 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <a href="index.html" class="brand-logo">FastFood</a>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <button class="lang-switch-btn" id="lang-btn" onclick="toggleLanguage()">
+              IT 🇮🇹
+            </button>
+
+            <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
+              <i class="bi bi-list fs-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 3. CONTENUTO REGISTRAZIONE -->
+    <main class="container py-5" style="max-width: 520px; min-height: 65vh;">
+      <div class="border border-dark p-4 p-md-5 bg-white">
+        
+        <div class="text-center mb-4">
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-2" id="txt-badge-auth">CREA UN ACCOUNT</span>
+          <h3 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;" id="txt-register-title">
+            REGISTRATI
+          </h3>
+          <p class="small text-muted mt-1" id="txt-register-sub">
+            Crea il tuo profilo cliente o unisciti come ristorante partner
+          </p>
+        </div>
+
+        <!-- Alert Messaggi -->
+        <div id="register-alert" class="alert alert-danger rounded-0 small d-none py-2 px-3 mb-3"></div>
+
+        <!-- Form Registrazione -->
+        <form id="register-form" onsubmit="handleRegisterSubmit(event)">
+          
+          <!-- SELETTORE RUOLO -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-uppercase" id="lbl-role">Tipologia Account</label>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2" id="btn-role-customer" onclick="setRole('customer')">
+                <i class="bi bi-person me-1"></i> <span id="txt-role-customer">CLIENTE</span>
+              </button>
+              <button type="button" class="btn btn-outline-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2" id="btn-role-restaurant" onclick="setRole('restaurant')">
+                <i class="bi bi-shop me-1"></i> <span id="txt-role-restaurant">RISTORANTE</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- NOME UTENTE / REFERENTE -->
+          <div class="mb-3">
+            <label for="name" class="form-label small fw-bold text-uppercase" id="lbl-name">Nome Completo</label>
+            <input type="text" class="form-control rounded-0 border-dark shadow-none" id="name" required placeholder="Mario Rossi">
+          </div>
+
+          <!-- EMAIL -->
+          <div class="mb-3">
+            <label for="email" class="form-label small fw-bold text-uppercase" id="lbl-email">Indirizzo Email</label>
+            <input type="email" class="form-control rounded-0 border-dark shadow-none" id="email" required placeholder="nome@esempio.it">
+          </div>
+
+          <!-- PASSWORD CON TASTO MOSTRA/NASCONDI -->
+          <div class="mb-3">
+            <label for="password" class="form-label small fw-bold text-uppercase" id="lbl-password">Password (min. 6 caratteri)</label>
+            <div class="input-group">
+              <input type="password" class="form-control rounded-0 border-dark shadow-none" id="password" required placeholder="••••••••" minlength="6">
+              <button class="btn btn-outline-dark rounded-0 border-dark px-3" type="button" id="btn-toggle-password" onclick="togglePasswordVisibility('password', 'pwd-icon')">
+                <i class="bi bi-eye" id="pwd-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- CAMPI CLIENTE -->
+          <div id="customer-fields" class="mb-4">
+            <label for="favoriteCategory" class="form-label small fw-bold text-uppercase" id="lbl-fav-cat">Piatto/Cucina Preferita</label>
+            <select id="favoriteCategory" class="form-select rounded-0 border-dark shadow-none">
+              <option value="" id="opt-fav-none">Nessuna preferenza specifica</option>
+              <option value="Beef">Beef / Manzo</option>
+              <option value="Chicken">Chicken / Pollo</option>
+              <option value="Dessert">Dessert / Dolci</option>
+              <option value="Pasta">Pasta</option>
+              <option value="Seafood">Seafood / Pesce</option>
+              <option value="Vegetarian">Vegetarian / Vegetariano</option>
+            </select>
+          </div>
+
+          <!-- CAMPI RISTORANTE (Senza P.IVA) -->
+          <div id="restaurant-fields" class="d-none">
+            <div class="mb-3">
+              <label for="restaurantName" class="form-label small fw-bold text-uppercase" id="lbl-rest-name">Nome del Locale / Ristorante</label>
+              <input type="text" class="form-control rounded-0 border-dark shadow-none" id="restaurantName" placeholder="Es. Pizzeria Da Francesco">
+            </div>
+
+            <div class="mb-3">
+              <label for="restaurantAddress" class="form-label small fw-bold text-uppercase" id="lbl-rest-addr">Indirizzo Ritiro Asporto</label>
+              <input type="text" class="form-control rounded-0 border-dark shadow-none" id="restaurantAddress" placeholder="Es. Via Roma 12, Milano">
+            </div>
+
+            <div class="mb-4">
+              <label for="restaurantPhone" class="form-label small fw-bold text-uppercase" id="lbl-rest-phone">Recapito Telefonico</label>
+              <input type="tel" class="form-control rounded-0 border-dark shadow-none" id="restaurantPhone" placeholder="Es. 02 1234567">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" id="btn-submit-register">
+            CREA ACCOUNT
+          </button>
+        </form>
+
+        <div class="text-center border-top mt-4 pt-3">
+          <p class="small text-muted mb-2" id="txt-have-account">Hai già un account registrato?</p>
+          <a href="login.html" class="small fw-bold text-dark text-uppercase text-decoration-underline" id="txt-go-login">
+            ACCEDI QUI &rarr;
+          </a>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- 4. FOOTER -->
+    <footer class="main-footer mt-5">
+      <div class="container-fluid px-3 px-md-4">
+        <div class="row g-4">
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-service">SERVIZIO</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-how">Come Ordinare</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-pickup">Ritiro al Bancone</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-partner">PARTNER</div>
+            <a href="register.html" class="footer-link" id="txt-f-join">Diventa un Ristorante Partner</a>
+            <a href="login.html" class="footer-link" id="txt-f-manage">Accedi al Gestionale</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-support">SUPPORTO</div>
+            <a href="mailto:support@fastfood.local" class="footer-link" id="txt-f-contact">Contatta Assistenza</a>
+            <span class="footer-link text-muted" id="txt-f-chat">Chat 24/7 Attiva</span>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-legal">LEGAL</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal" id="txt-f-terms">Privacy & Termini</a>
+            <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- MODALI -->
+    <div class="modal fade" id="modalInfo" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-info-title">Informazioni Servizio</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-info-body">
+            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalLegal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-legal-title">Termini & Note Legali</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-legal-body">
+            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. OFFCANVAS DRAWER -->
+    <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
+      <div class="offcanvas-header justify-content-end pb-0">
+        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
+        <div>
+          <a href="catalog.html" class="drawer-nav-item"><span id="txt-d-catalog">CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="restaurantCatalog.html" class="drawer-nav-item"><span id="txt-d-restaurants">I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="orders.html" class="drawer-nav-item"><span id="txt-d-orders">I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link"><span id="txt-d-stats">STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
+        </div>
+        <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
+      </div>
+    </div>
+
+    <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/register.js"></script>
+  </body>
+</html>
