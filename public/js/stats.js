@@ -9,8 +9,8 @@ const i18n = {
     btn: 'IT 🇮🇹',
     announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
     badgeStats: 'GESTIONALE LOCALE',
-    btnRefresh: 'AGGIORNA DATI',
-    btnViewMenu: 'VEDI MENU PUBBLICO',
+    btnRefresh: 'AGGIORNA',
+    btnViewMenu: 'MENU PUBBLICO',
     kpiRevenue: 'Incasso Totale',
     kpiRevenueSub: 'Ordini completati',
     kpiOrders: 'Ordini Ricevuti',
@@ -21,7 +21,7 @@ const i18n = {
     kpiPendingSub: 'Da consegnare al banco',
     chartRevenueTitle: 'ANDAMENTO VENDITE SETTIMANALI (€)',
     chartDays: 'ULTIMI 7 GIORNI',
-    chartCatTitle: 'PIATTI PIÙ ORDINATI PER CATEGORIA',
+    chartCatTitle: 'DISTRIBUZIONE PIATTI PER CATEGORIA',
     recentOrdersTitle: 'ULTIMI ORDINI AL BANCONE',
     thOrderId: 'ID Ordine',
     thOrderDate: 'Data & Ora',
@@ -31,14 +31,6 @@ const i18n = {
     thOrderStatus: 'Stato',
     noOrdersYet: 'Nessun ordine ricevuto al momento.',
     ordersFound: 'ordini trovati',
-    dCatalog: 'CATALOGO COMPLETO',
-    dRestaurants: 'I NOSTRI RISTORANTI',
-    dOrders: 'I MIEI ORDINI',
-    dStats: 'STATISTICHE LOCALE',
-    login: 'ACCEDI',
-    register: 'REGISTRATI',
-    logout: 'LOGOUT',
-    loggedAs: 'ACCESSO EFFETTUATO COME:',
     fService: 'SERVIZIO',
     fHow: 'Come Ordinare',
     fPickup: 'Ritiro al Bancone',
@@ -57,8 +49,8 @@ const i18n = {
     btn: 'EN 🇬🇧',
     announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
     badgeStats: 'RESTAURANT DASHBOARD',
-    btnRefresh: 'REFRESH DATA',
-    btnViewMenu: 'VIEW PUBLIC MENU',
+    btnRefresh: 'REFRESH',
+    btnViewMenu: 'PUBLIC MENU',
     kpiRevenue: 'Total Revenue',
     kpiRevenueSub: 'Completed orders',
     kpiOrders: 'Total Orders',
@@ -69,7 +61,7 @@ const i18n = {
     kpiPendingSub: 'Awaiting counter pickup',
     chartRevenueTitle: 'WEEKLY SALES OVERVIEW (€)',
     chartDays: 'LAST 7 DAYS',
-    chartCatTitle: 'MOST ORDERED CATEGORIES',
+    chartCatTitle: 'DISHES BY CATEGORY',
     recentOrdersTitle: 'RECENT COUNTER ORDERS',
     thOrderId: 'Order ID',
     thOrderDate: 'Date & Time',
@@ -79,14 +71,6 @@ const i18n = {
     thOrderStatus: 'Status',
     noOrdersYet: 'No orders received yet.',
     ordersFound: 'orders found',
-    dCatalog: 'FULL CATALOG',
-    dRestaurants: 'OUR RESTAURANTS',
-    dOrders: 'MY ORDERS',
-    dStats: 'RESTAURANT STATS',
-    login: 'LOGIN',
-    register: 'REGISTER',
-    logout: 'LOGOUT',
-    loggedAs: 'LOGGED IN AS:',
     fService: 'SERVICE',
     fHow: 'How to Order',
     fPickup: 'Counter Pickup',
@@ -107,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
 
-  // Protezione rotta: solo i ristoratori possono accedere
   if (!token || role !== 'restaurant') {
     window.location.href = 'login.html';
     return;
@@ -171,64 +154,86 @@ function renderLanguageUI() {
   setT('txt-m-info-body', t.mInfoBody);
   setT('txt-m-legal-title', t.mLegalTitle);
   setT('txt-m-legal-body', t.mLegalBody);
-
-  setT('txt-d-catalog', t.dCatalog);
-  setT('txt-d-restaurants', t.dRestaurants);
-  setT('txt-d-orders', t.dOrders);
-  setT('txt-d-stats', t.dStats);
 }
 
-function renderHeaderInfo() {
-  const restName = localStorage.getItem('restaurantName') || localStorage.getItem('userName') || 'Il Mio Locale';
-  const restAddr = localStorage.getItem('restaurantAddress') || 'Ritiro ordini al bancone';
+async function renderHeaderInfo() {
+  try {
+    const me = await apiRequest('/auth/me');
+    const restName = me.restaurantName || me.name || 'Il Mio Locale';
+    const restAddr = me.restaurantAddress || me.address || 'Ritiro al bancone';
 
-  const nameEl = document.getElementById('restaurant-name-header');
-  const addrEl = document.getElementById('restaurant-addr-header');
+    const nameEl = document.getElementById('restaurant-name-header');
+    const addrEl = document.getElementById('restaurant-addr-header');
 
-  if (nameEl) nameEl.textContent = restName;
-  if (addrEl) addrEl.textContent = restAddr;
+    if (nameEl) nameEl.textContent = restName;
+    if (addrEl) addrEl.textContent = `${restAddr} • P.IVA: ${me.IVAnumber || me.partitaIva || 'Attiva'}`;
+  } catch (err) {
+    const nameEl = document.getElementById('restaurant-name-header');
+    if (nameEl) nameEl.textContent = localStorage.getItem('userName') || 'Il Mio Locale';
+  }
 }
 
 /**
- * Caricamento Statistiche dal Backend
+ * Caricamento Statistiche: recupera i piatti reali direttamente dal menu del ristorante
  */
 async function loadRestaurantStats() {
-  const t = i18n[currentLang];
-  let statsData = null;
-
   try {
-    statsData = await apiRequest('/restaurant/stats');
-  } catch (err) {
-    // Fallback con dati vuoti a 0 se non ci sono ordini
-    statsData = {
+    // 1. Profilo e ID del ristorante autenticato
+    const userProfile = await apiRequest('/auth/me');
+    const myId = String(userProfile._id || userProfile.id);
+
+    // 2. RECUPERA I PIATTI ESATTI DALLA STESSA ROTTA DI MANAGEMENU
+    const menuRes = await apiRequest(`/restaurants/${myId}/menu`);
+    const activeMeals = (menuRes && Array.isArray(menuRes.menu)) ? menuRes.menu.filter(Boolean) : [];
+    const activeMealsCount = activeMeals.length;
+
+    // 3. Calcolo categorie basato sui piatti attivi
+    const catMap = {};
+    activeMeals.forEach(m => {
+      const c = m.strCategory || 'Generale';
+      catMap[c] = (catMap[c] || 0) + 1;
+    });
+
+    const categoryData = Object.keys(catMap).length > 0 ? {
+      labels: Object.keys(catMap),
+      counts: Object.values(catMap)
+    } : { labels: ['Nessun Piatto'], counts: [1] };
+
+    // 4. Recupero ordini (se la rotta /restaurant/stats o /orders esiste)
+    let statsBackend = {
       totalRevenue: 0,
       totalOrders: 0,
-      activeMealsCount: 0,
       pendingOrdersCount: 0,
       weeklyRevenue: [0, 0, 0, 0, 0, 0, 0],
       weeklyLabels: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
-      categoriesData: { labels: ['Nessun dato'], counts: [0] },
       recentOrders: []
     };
+
+    try {
+      const s = await apiRequest('/restaurant/stats');
+      if (s) statsBackend = { ...statsBackend, ...s };
+    } catch (e) {
+      // Ignora se la rotta ordini è ancora vuota
+    }
+
+    // 5. AGGIORNAMENTO SCHEDE KPI NEL DOM
+    document.getElementById('kpi-meals-val').textContent = activeMealsCount;
+    document.getElementById('kpi-revenue-val').textContent = `€ ${(statsBackend.totalRevenue || 0).toFixed(2)}`;
+    document.getElementById('kpi-orders-val').textContent = statsBackend.totalOrders || 0;
+    document.getElementById('kpi-pending-val').textContent = statsBackend.pendingOrdersCount || 0;
+
+    // 6. RENDER GRAFICI
+    renderRevenueChart(statsBackend.weeklyLabels, statsBackend.weeklyRevenue);
+    renderCategoryChart(categoryData);
+
+    // 7. RENDER TABELLA ORDINI
+    renderRecentOrdersTable(statsBackend.recentOrders || []);
+
+  } catch (err) {
+    console.error('Errore caricamento statistiche:', err);
   }
-
-  // 1. Aggiorna Schede KPI
-  document.getElementById('kpi-revenue-val').textContent = `€ ${(statsData.totalRevenue || 0).toFixed(2)}`;
-  document.getElementById('kpi-orders-val').textContent = statsData.totalOrders || 0;
-  document.getElementById('kpi-meals-val').textContent = statsData.activeMealsCount || 0;
-  document.getElementById('kpi-pending-val').textContent = statsData.pendingOrdersCount || 0;
-
-  // 2. Renderizza Grafici
-  renderRevenueChart(statsData.weeklyLabels || ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'], statsData.weeklyRevenue || [0, 0, 0, 0, 0, 0, 0]);
-  renderCategoryChart(statsData.categoriesData || { labels: ['Nessuna Vendita'], counts: [1] });
-
-  // 3. Renderizza Tabella Ordini
-  renderRecentOrdersTable(statsData.recentOrders || []);
 }
 
-/**
- * Grafico Andamento Incassi (Line Chart minimale nero/grigio)
- */
 function renderRevenueChart(labels, dataValues) {
   const ctx = document.getElementById('revenueChart');
   if (!ctx) return;
@@ -267,22 +272,15 @@ function renderRevenueChart(labels, dataValues) {
       scales: {
         y: {
           beginAtZero: true,
-          ticks: {
-            callback: (value) => `€ ${value}`
-          },
+          ticks: { callback: (value) => `€ ${value}` },
           grid: { color: '#f0f0f0' }
         },
-        x: {
-          grid: { display: false }
-        }
+        x: { grid: { display: false } }
       }
     }
   });
 }
 
-/**
- * Grafico Distribuzione Categorie (Doughnut Chart)
- */
 function renderCategoryChart(catData) {
   const ctx = document.getElementById('categoryChart');
   if (!ctx) return;
@@ -291,12 +289,10 @@ function renderCategoryChart(catData) {
     categoryChartInstance.destroy();
   }
 
-  const hasData = catData.counts && catData.counts.some(c => c > 0);
-  const labels = hasData ? catData.labels : ['Nessun Ordine'];
+  const hasData = catData && catData.counts && catData.counts.some(c => c > 0 && catData.labels[0] !== 'Nessun Piatto');
+  const labels = hasData ? catData.labels : ['Nessun Piatto'];
   const counts = hasData ? catData.counts : [1];
-  const bgColors = hasData 
-    ? ['#111111', '#555555', '#888888', '#bbbbbb', '#e0e0e0']
-    : ['#e0e0e0'];
+  const bgColors = hasData ? ['#111111', '#555555', '#888888', '#bbbbbb', '#e0e0e0'] : ['#e0e0e0'];
 
   categoryChartInstance = new Chart(ctx, {
     type: 'doughnut',
@@ -323,9 +319,6 @@ function renderCategoryChart(catData) {
   });
 }
 
-/**
- * Tabella Ordini Recenti
- */
 function renderRecentOrdersTable(orders) {
   const tbody = document.getElementById('stats-orders-tbody');
   const countBadge = document.getElementById('orders-count-badge');
@@ -336,11 +329,7 @@ function renderRecentOrdersTable(orders) {
   if (countBadge) countBadge.textContent = `${orders.length} ${t.ordersFound}`;
 
   if (!orders || orders.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4 text-muted">${t.noOrdersYet}</td>
-      </tr>
-    `;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">${t.noOrdersYet}</td></tr>`;
     return;
   }
 
@@ -348,9 +337,7 @@ function renderRecentOrdersTable(orders) {
     const idShort = (ord._id || 'ORD').slice(-6).toUpperCase();
     const dateStr = ord.createdAt ? new Date(ord.createdAt).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) : '--/--';
     const custName = ord.customerName || (ord.user && ord.user.name) || 'Cliente Bancone';
-    const itemsSummary = Array.isArray(ord.items) 
-      ? ord.items.map(i => `${i.quantity}x ${i.name || 'Piatto'}`).join(', ')
-      : '1x Menu';
+    const itemsSummary = Array.isArray(ord.items) ? ord.items.map(i => `${i.quantity}x ${i.name || 'Piatto'}`).join(', ') : '1x Menu';
     const total = (ord.totalAmount || ord.total || 0).toFixed(2);
     
     let statusBadge = '<span class="badge bg-secondary rounded-0">RICEVUTO</span>';
@@ -378,7 +365,6 @@ function renderDrawerAuth() {
   const drawerSec = document.getElementById('drawer-user-section');
 
   if (!drawerSec) return;
-
   const isIt = currentLang === 'IT';
 
   if (token) {
@@ -389,12 +375,10 @@ function renderDrawerAuth() {
       <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
         ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
       </div>
-
       <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
         <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
         <i class="bi bi-arrow-right"></i>
       </a>
-
       <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
         ${isIt ? 'Logout' : 'Logout'}
       </button>
