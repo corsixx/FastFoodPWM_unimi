@@ -397,5 +397,52 @@ router.get('/restaurants', async (req, res) => {
     res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti.", error: err.message });
   }
 });
+// ============================================================================
+// ROTTA 6: LISTA PUBBLICA DEI RISTORANTI PARTNER CON COPERTINA DA PIATTO REALE
+// ============================================================================
+/**
+ * @swagger
+ * /api/auth/restaurants:
+ *   get:
+ *     summary: Recupera la lista di tutti i ristoranti partner con foto copertina dal loro menu
+ *     tags: [Autenticazione]
+ *     responses:
+ *       200:
+ *         description: Lista ristoranti partner recuperata con successo
+ *       500:
+ *         description: Errore del server
+ */
+router.get('/restaurants', async (req, res) => {
+  try {
+    // 1. Prendi tutti gli utenti registrati come ristoranti
+    const restaurants = await User.find({ role: 'restaurant' }).select('-password').lean();
 
+    // 2. Per ogni ristorante, recupera il primo piatto per estrarre foto e categoria
+    const results = await Promise.all(
+      restaurants.map(async (r) => {
+        // Cerca un piatto collegato al ristorante (controlla sia restaurantId che restaurant o id)
+        const sampleMeal = await Meal.findOne({
+          $or: [
+            { restaurantId: r._id },
+            { restaurant: r._id }
+          ]
+        }).lean();
+
+        return {
+          _id: r._id,
+          name: r.restaurantName || r.name || 'Ristorante Partner',
+          cuisine: (sampleMeal && sampleMeal.strCategory) ? sampleMeal.strCategory.toUpperCase() : 'MENU PARTNER',
+          location: r.restaurantAddress || 'Ritiro al Bancone',
+          phone: r.restaurantPhone || '',
+          img: (sampleMeal && sampleMeal.strMealThumb) ? sampleMeal.strMealThumb : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
+        };
+      })
+    );
+
+    res.status(200).json(results);
+  } catch (err) {
+    console.error("Errore recupero ristoranti:", err);
+    res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti.", error: err.message });
+  }
+});
 module.exports = router;
