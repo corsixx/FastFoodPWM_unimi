@@ -1,226 +1,259 @@
+// public/js/app.js
+
 let currentCategory = '';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentLang = localStorage.getItem('appLang') || 'IT';
 
-const translations = {
+// Dizionario testi IT/EN interno
+const i18n = {
   IT: {
-    currentFlag: 'IT 🇮🇹',
-    topAnnouncement: 'Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido',
+    btn: 'IT 🇮🇹',
+    announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
     heroBadge: 'CATALOGO PIATTI',
-    heroCta: 'SCOPRI IL MENU COMPLETO &rarr;',
-    recomHeading: 'SCELTI PER TE (IN BACHECA)',
-    popularHeading: 'NEW IN / I PIÙ POPOLARI',
+    heroCta: 'SCOPRI IL MENU COMPLETO →',
+    recomTitle: 'SCELTI PER TE (IN BACHECA)',
+    popularTitle: 'NEW IN / I PIÙ POPOLARI',
     viewAll: 'Vedi Tutto il Menu',
-    allCategories: 'ALL / TUTTO',
-    prepTime: 'prep',
-    drawerCatalog: 'CATALOGO COMPLETO',
-    drawerRestaurants: 'I NOSTRI RISTORANTI',
-    drawerOrders: 'I MIEI ORDINI',
-    drawerStats: 'STATISTICHE LOCALE',
-    loginBtn: 'ACCEDI',
-    regBtn: 'REGISTRATI',
-    logoutBtn: 'LOGOUT',
-    loggedInAs: 'ACCESSO EFFETTUATO COME:',
-    footerService: 'SERVIZIO',
-    footerHow: 'Come Ordinare',
-    footerPickup: 'Ritiro al Bancone',
-    footerWait: 'Tempi di Attesa',
-    footerPartner: 'PARTNER',
-    footerJoin: 'Diventa un Ristorante Partner',
-    footerManage: 'Accedi al Gestionale',
-    footerSupport: 'SUPPORTO',
-    footerHelp: 'Contatta Assistenza',
-    footerChat: 'Chat 24/7 Attiva',
-    modalInfoTitle: 'Informazioni Servizio',
-    modalInfoBody: 'Scegli i piatti dal menu, inoltra l\'ordine e ritira direttamente al punto cassa senza code. I tempi di attesa sono calcolati in tempo reale in base agli ordini in cucina.',
-    modalLegalTitle: 'Termini & Note Legali',
-    modalLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
+    allCat: 'ALL / TUTTO',
+    prep: 'prep',
+    dCatalog: 'CATALOGO COMPLETO',
+    dRestaurants: 'I NOSTRI RISTORANTI',
+    dOrders: 'I MIEI ORDINI',
+    dStats: 'STATISTICHE LOCALE',
+    login: 'ACCEDI',
+    register: 'REGISTRATI',
+    logout: 'LOGOUT',
+    loggedAs: 'ACCESSO EFFETTUATO COME:',
+    fService: 'SERVIZIO',
+    fHow: 'Come Ordinare',
+    fPickup: 'Ritiro al Bancone',
+    fWait: 'Tempi di Attesa',
+    fPartner: 'PARTNER',
+    fJoin: 'Diventa un Ristorante Partner',
+    fManage: 'Accedi al Gestionale',
+    fSupport: 'SUPPORTO',
+    fContact: 'Contatta Assistenza',
+    fChat: 'Chat 24/7 Attiva',
+    mInfoTitle: 'Informazioni Servizio',
+    mInfoBody: 'Scegli i piatti dal menu, inoltra l\'ordine e ritira direttamente al punto cassa senza code.',
+    mLegalTitle: 'Termini & Note Legali',
+    mLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
   },
   EN: {
-    currentFlag: 'EN 🇬🇧',
-    topAnnouncement: '24/7 Live Chat Support &bull; Counter Pickup & Express Takeout',
+    btn: 'EN 🇬🇧',
+    announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
     heroBadge: 'FULL CATALOG',
-    heroCta: 'EXPLORE FULL MENU &rarr;',
-    recomHeading: 'CHOSEN FOR YOU (RECOMMENDED)',
-    popularHeading: 'NEW IN / MOST POPULAR',
+    heroCta: 'EXPLORE FULL MENU →',
+    recomTitle: 'CHOSEN FOR YOU (RECOMMENDED)',
+    popularTitle: 'NEW IN / MOST POPULAR',
     viewAll: 'View Full Menu',
-    allCategories: 'ALL',
-    prepTime: 'prep',
-    drawerCatalog: 'FULL CATALOG',
-    drawerRestaurants: 'OUR RESTAURANTS',
-    drawerOrders: 'MY ORDERS',
-    drawerStats: 'RESTAURANT STATS',
-    loginBtn: 'LOGIN',
-    regBtn: 'REGISTER',
-    logoutBtn: 'LOGOUT',
-    loggedInAs: 'LOGGED IN AS:',
-    footerService: 'SERVICE',
-    footerHow: 'How to Order',
-    footerPickup: 'Counter Pickup',
-    footerWait: 'Wait Times',
-    footerPartner: 'PARTNER',
-    footerJoin: 'Become a Partner Restaurant',
-    footerManage: 'Access Dashboard',
-    footerSupport: 'SUPPORT',
-    footerHelp: 'Contact Support',
-    footerChat: '24/7 Chat Active',
-    modalInfoTitle: 'Service Information',
-    modalInfoBody: 'Choose dishes from the menu, place your order and pick up at the counter with no queue. Wait times are calculated in real time based on kitchen load.',
-    modalLegalTitle: 'Terms & Legal Notes',
-    modalLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in the database.'
+    allCat: 'ALL',
+    prep: 'prep',
+    dCatalog: 'FULL CATALOG',
+    dRestaurants: 'OUR RESTAURANTS',
+    dOrders: 'MY ORDERS',
+    dStats: 'RESTAURANT STATS',
+    login: 'LOGIN',
+    register: 'REGISTER',
+    logout: 'LOGOUT',
+    loggedAs: 'LOGGED IN AS:',
+    fService: 'SERVICE',
+    fHow: 'How to Order',
+    fPickup: 'Counter Pickup',
+    fWait: 'Wait Times',
+    fPartner: 'PARTNER',
+    fJoin: 'Become a Partner Restaurant',
+    fManage: 'Access Dashboard',
+    fSupport: 'SUPPORT',
+    fContact: 'Contact Support',
+    fChat: '24/7 Chat Active',
+    mInfoTitle: 'Service Information',
+    mInfoBody: 'Choose dishes from the menu, place your order and pick up at the checkout counter.',
+    mLegalTitle: 'Terms & Legal Notes',
+    mLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in database.'
   }
 };
 
+// AVVIO APPLICAZIONE
 document.addEventListener('DOMContentLoaded', () => {
-  applyLanguage(currentLang);
+  renderLanguageUI();
   renderCartBadge();
   loadBackendCategories();
   loadCatalog();
   loadRecommendations();
   renderDrawerAuth();
-  setupHorizontalWheelScroll();
+  setupBarMovement();
 });
 
 /**
- * CAMBIO LINGUA (IT <-> EN)
+ * 1. CAMBIO LINGUA ISTANTANEO
  */
 function toggleLanguage() {
   currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
   localStorage.setItem('appLang', currentLang);
-  applyLanguage(currentLang);
+  renderLanguageUI();
   renderDrawerAuth();
   loadCatalog();
   loadBackendCategories();
 }
 
-function applyLanguage(lang) {
-  const t = translations[lang];
-
-  const setHtml = (id, html) => {
+function renderLanguageUI() {
+  const t = i18n[currentLang];
+  const setT = (id, text) => {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
+    if (el) el.textContent = text;
   };
 
-  const setText = (id, txt) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = txt;
-  };
-
-  setText('lang-current', t.currentFlag);
-  setHtml('top-announcement', t.topAnnouncement);
-  setText('hero-badge', t.heroBadge);
-  setHtml('hero-cta-btn', t.heroCta);
-  setText('recom-heading', t.recomHeading);
-  setText('section-popular-heading', t.popularHeading);
-  setText('link-view-all', t.viewAll);
-  setText('btn-all-categories', t.allCategories);
+  setT('lang-btn', t.btn);
+  setT('txt-announcement', t.announcement);
+  setT('txt-hero-badge', t.heroBadge);
+  setT('txt-hero-cta', t.heroCta);
+  setT('txt-recom-title', t.recomTitle);
+  setT('txt-popular-title', t.popularTitle);
+  setT('txt-view-all', t.viewAll);
+  setT('btn-cat-all', t.allCat);
 
   // Footer & Modali
-  setText('footer-title-service', t.footerService);
-  setText('footer-link-how', t.footerHow);
-  setText('footer-link-pickup', t.footerPickup);
-  setText('footer-link-wait', t.footerWait);
-  setText('footer-title-partner', t.footerPartner);
-  setText('footer-link-partner', t.footerJoin);
-  setText('footer-link-manage', t.footerManage);
-  setText('footer-title-support', t.footerSupport);
-  setText('footer-link-help', t.footerHelp);
-  setText('footer-link-chat', t.footerChat);
-  setText('modal-info-title', t.modalInfoTitle);
-  setText('modal-info-body', t.modalInfoBody);
-  setText('modal-legal-title', t.modalLegalTitle);
-  setText('modal-legal-body', t.modalLegalBody);
+  setT('txt-f-service', t.fService);
+  setT('txt-f-how', t.fHow);
+  setT('txt-f-pickup', t.fPickup);
+  setT('txt-f-wait', t.fWait);
+  setT('txt-f-partner', t.fPartner);
+  setT('txt-f-join', t.fJoin);
+  setT('txt-f-manage', t.fManage);
+  setT('txt-f-support', t.fSupport);
+  setT('txt-f-contact', t.fContact);
+  setT('txt-f-chat', t.fChat);
+  setT('txt-m-info-title', t.mInfoTitle);
+  setT('txt-m-info-body', t.mInfoBody);
+  setT('txt-m-legal-title', t.mLegalTitle);
+  setT('txt-m-legal-body', t.mLegalBody);
 
   // Drawer
-  setText('drawer-catalog-link', t.drawerCatalog);
-  setText('drawer-restaurants-link', t.drawerRestaurants);
-  setText('drawer-orders-link', t.drawerOrders);
+  setT('txt-d-catalog', t.dCatalog);
+  setT('txt-d-restaurants', t.dRestaurants);
+  setT('txt-d-orders', t.dOrders);
+  setT('txt-d-stats', t.dStats);
 }
 
 /**
- * SCORRIMENTO ORIZZONTALE BARRA
+ * 2. MOVIMENTO BARRA CATEGORIE SU COMPUTER
  */
-function setupHorizontalWheelScroll() {
-  const scrollNav = document.getElementById('categories-nav');
-  if (scrollNav) {
-    scrollNav.addEventListener('wheel', (evt) => {
-      evt.preventDefault();
-      scrollNav.scrollLeft += evt.deltaY;
-    }, { passive: false });
-  }
+function setupBarMovement() {
+  const slider = document.querySelector('.categories-bar-wrapper');
+  if (!slider) return;
+
+  slider.addEventListener('wheel', (e) => {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      slider.scrollLeft += e.deltaY;
+    }
+  }, { passive: false });
+
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+
+  slider.addEventListener('mouseleave', () => { isDown = false; });
+  slider.addEventListener('mouseup', () => { isDown = false; });
+
+  slider.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    slider.scrollLeft = scrollLeft - walk;
+  });
 }
 
 /**
- * CARICAMENTO CATEGORIE DA MONGODB
+ * 3. CARICA CATEGORIE DA MONGODB
  */
 async function loadBackendCategories() {
   const navContainer = document.getElementById('categories-nav');
+  if (!navContainer) return;
+
   try {
     const categories = await apiRequest('/meals/categories');
-    const t = translations[currentLang];
-    
+    const allLabel = i18n[currentLang].allCat;
+
     if (categories && Array.isArray(categories) && categories.length > 0) {
-      const dynamicButtons = categories.map(cat => `
-        <button class="nav-category-link ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
+      const buttons = categories.map(cat => `
+        <button class="nav-category-link ${currentCategory === cat ? 'active' : ''}" 
+                onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
           ${cat.toUpperCase()}
         </button>
       `).join('');
 
       navContainer.innerHTML = `
-        <button class="nav-category-link ${currentCategory === '' ? 'active' : ''}" onclick="filterCategory('', this)" id="btn-all-categories">${t.allCategories}</button>
-        ${dynamicButtons}
+        <button class="nav-category-link ${currentCategory === '' ? 'active' : ''}" 
+                onclick="filterCategory('', this)" id="btn-cat-all">${allLabel}</button>
+        ${buttons}
       `;
     }
-  } catch (error) {
-    console.error("Impossibile caricare le categorie:", error);
+  } catch (err) {
+    console.error("Errore categorie:", err);
   }
 }
 
 /**
- * CARICAMENTO FINO A 16 PIATTI
+ * 4. HELPER CREAZIONE CARD PIATTO
+ */
+function createProductCardHtml(meal, prepLabel, customTag = null) {
+  const tag = customTag || meal.strCategory || 'MENU';
+  const tagStyle = customTag ? 'style="background-color: var(--ff-yellow); color: #000;"' : '';
+  const img = meal.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood';
+  const nameSafe = (meal.strMeal || 'Piatto').replace(/'/g, "\\'");
+  const priceSafe = typeof meal.price === 'number' ? meal.price.toFixed(2) : '0.00';
+  const timeSafe = meal.preparationTime || 10;
+
+  return `
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="product-card" onclick="addToCart('${meal._id}', '${nameSafe}', ${meal.price || 0})">
+        <div class="product-img-wrapper">
+          <img src="${img}" alt="${meal.strMeal || ''}" loading="lazy">
+          <span class="product-tag" ${tagStyle}>${tag}</span>
+        </div>
+        <div class="product-title">${meal.strMeal || 'Piatto'}</div>
+        <div class="product-price">€ ${priceSafe} &bull; <span class="small">${timeSafe}m ${prepLabel}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * 5. CARICAMENTO MAX 16 PIATTI
  */
 async function loadCatalog() {
   const grid = document.getElementById('meals-grid');
   if (!grid) return;
 
-  const t = translations[currentLang];
+  const t = i18n[currentLang];
   grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'CARICAMENTO IN CORSO...' : 'LOADING ITEMS...'}</div>`;
 
   try {
-    let url = '/meals';
-    if (currentCategory) {
-      url += `?category=${encodeURIComponent(currentCategory)}`;
-    }
+    const query = currentCategory ? `?category=${encodeURIComponent(currentCategory)}` : '';
+    const meals = await apiRequest(`/meals${query}`);
 
-    const meals = await apiRequest(url);
-
-    if (!meals || meals.length === 0) {
+    if (!meals || !Array.isArray(meals) || meals.length === 0) {
       grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'NESSUN PRODOTTO PRESENTE.' : 'NO ITEMS AVAILABLE.'}</div>`;
       return;
     }
 
-    const limitedMeals = meals.slice(0, 16);
-
-    grid.innerHTML = limitedMeals.map(m => `
-      <div class="col-6 col-md-4 col-lg-3">
-        <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
-          <div class="product-img-wrapper">
-            <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood'}" alt="${m.strMeal}" loading="lazy">
-            <span class="product-tag">${m.strCategory || 'MENU'}</span>
-          </div>
-          <div class="product-title">${m.strMeal}</div>
-          <div class="product-price">€ ${m.price.toFixed(2)} &bull; <span class="small">${m.preparationTime || 10}m ${t.prepTime}</span></div>
-        </div>
-      </div>
-    `).join('');
-
-  } catch (error) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore di caricamento.</div>`;
+    grid.innerHTML = meals.slice(0, 16).map(m => createProductCardHtml(m, t.prep)).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti.</div>`;
   }
 }
 
 /**
- * CARICAMENTO BACHECA CONSIGLIATI
+ * 6. CARICAMENTO BACHECA CONSIGLIATI
  */
 async function loadRecommendations() {
   const token = localStorage.getItem('token');
@@ -229,23 +262,21 @@ async function loadRecommendations() {
 
   try {
     const data = await apiRequest('/meals/recommendations');
-    if (data.recommendations && data.recommendations.length > 0) {
-      document.getElementById('recommendations-wrapper').classList.remove('d-none');
-      document.getElementById('user-pref-label').textContent = `${data.favoriteCategory || 'In evidenza'}`;
-      
+    if (data && data.recommendations && data.recommendations.length > 0) {
+      const wrapper = document.getElementById('recommendations-wrapper');
+      const prefLabel = document.getElementById('user-pref-label');
       const container = document.getElementById('recommendations-container');
-      container.innerHTML = data.recommendations.slice(0, 4).map(m => `
-        <div class="col-6 col-md-3">
-          <div class="product-card" onclick="addToCart('${m._id}', '${m.strMeal.replace(/'/g, "\\'")}', ${m.price})">
-            <div class="product-img-wrapper">
-              <img src="${m.strMealThumb}" alt="${m.strMeal}">
-              <span class="product-tag" style="background-color: var(--ff-yellow); color: #000;">TOP</span>
-            </div>
-            <div class="product-title">${m.strMeal}</div>
-            <div class="product-price">€ ${m.price.toFixed(2)}</div>
-          </div>
-        </div>
-      `).join('');
+
+      if (wrapper) wrapper.classList.remove('d-none');
+      if (prefLabel) prefLabel.textContent = `${data.favoriteCategory || 'In evidenza'}`;
+      
+      const t = i18n[currentLang];
+
+      if (container) {
+        container.innerHTML = data.recommendations.slice(0, 4)
+          .map(m => createProductCardHtml(m, t.prep, 'TOP'))
+          .join('');
+      }
     }
   } catch (e) {
     // Silenzioso
@@ -253,29 +284,23 @@ async function loadRecommendations() {
 }
 
 /**
- * FILTRI
+ * 7. FILTRI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
-
   document.querySelectorAll('.nav-category-link').forEach(el => el.classList.remove('active'));
-  if (btnElement) {
-    btnElement.classList.add('active');
-  }
-
+  if (btnElement) btnElement.classList.add('active');
   loadCatalog();
 }
 
 /**
- * CARRELLO
+ * 8. CARRELLO
  */
 function addToCart(mealId, name, price) {
-  const existing = cart.find(item => item.mealId === mealId);
-  if (existing) {
-    existing.quantity += 1;
-  } else {
-    cart.push({ mealId, name, price, quantity: 1 });
-  }
+  const item = cart.find(i => i.mealId === mealId);
+  if (item) item.quantity += 1;
+  else cart.push({ mealId, name, price, quantity: 1 });
+
   localStorage.setItem('cart', JSON.stringify(cart));
   renderCartBadge();
 
@@ -287,40 +312,39 @@ function addToCart(mealId, name, price) {
 }
 
 function renderCartBadge() {
-  const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
+  const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
   const badge = document.getElementById('cart-badge');
-  if (badge) badge.textContent = totalItems;
+  if (badge) badge.textContent = count;
 }
 
 /**
- * STATO AUTENTICAZIONE DRAWER
+ * 9. STATO DRAWER AUTENTICAZIONE
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
   const name = localStorage.getItem('userName');
   const drawerSec = document.getElementById('drawer-user-section');
-  const t = translations[currentLang];
 
   if (!drawerSec) return;
 
+  const t = i18n[currentLang];
+
   if (role === 'restaurant') {
     const statsLink = document.getElementById('drawer-stats-link');
-    const ordersLink = document.getElementById('drawer-orders-link');
     if (statsLink) statsLink.classList.remove('d-none');
-    if (ordersLink) ordersLink.textContent = t.drawerStats;
   }
 
   if (token) {
     drawerSec.innerHTML = `
-      <div class="small text-muted mb-1">${t.loggedInAs}</div>
+      <div class="small text-muted mb-1">${t.loggedAs}</div>
       <div class="fw-bold text-uppercase mb-3">${name || 'Utente'} (${role})</div>
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">${t.logoutBtn}</button>
+      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm" onclick="logout()">${t.logout}</button>
     `;
   } else {
     drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.loginBtn}</a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.regBtn}</a>
+      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.login}</a>
+      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem;">${t.register}</a>
     `;
   }
 }

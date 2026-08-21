@@ -23,7 +23,7 @@ body {
   overflow-x: hidden;
 }
 
-/* TOP ANNOUNCEMENT BAR */
+/* TOP BAR */
 .top-bar {
   background-color: var(--ff-yellow);
   color: var(--ff-black);
@@ -64,7 +64,7 @@ body {
   cursor: pointer;
 }
 
-/* PULSANTE CAMBIO LINGUA */
+/* PULSANTE LINGUA */
 .lang-switch-btn {
   background: transparent;
   border: 1px solid var(--ff-border);
@@ -83,32 +83,38 @@ body {
   color: var(--ff-white);
 }
 
-/* BARRA CATEGORIE PERFETTAMENTE CENTRATA */
+/* BARRA CATEGORIE CENTRATA E SCORREVOLE */
 .categories-bar-wrapper {
   border-top: 1px solid var(--ff-border);
   background-color: var(--ff-white);
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.categories-bar-wrapper:active {
+  cursor: grabbing;
+}
+
+.categories-bar-wrapper::-webkit-scrollbar {
+  display: none;
 }
 
 .categories-scroll-container {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  justify-content: center;
   align-items: center;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  justify-content: center;
+  width: max-content;
+  min-width: 100%;
   gap: 0.4rem;
   padding: 0.45rem 1rem;
-  max-width: 100%;
-}
-
-.categories-scroll-container::-webkit-scrollbar {
-  display: none;
 }
 
 .nav-category-link {
