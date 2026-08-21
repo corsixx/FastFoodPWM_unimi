@@ -3,8 +3,6 @@
 let currentCategory = '';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentLang = localStorage.getItem('appLang') || 'IT';
-let allLoadedMeals = []; // Cache in memoria per aprire al volo la modale di dettaglio
-let mealModalInstance = null;
 
 // Dizionario testi IT/EN interno
 const i18n = {
@@ -20,9 +18,6 @@ const i18n = {
     prep: 'prep',
     btnView: 'VEDI',
     btnCart: '+ CARRELLO',
-    modalDesc: 'Descrizione & Ingredienti',
-    modalAdd: 'AGGIUNGI AL CARRELLO',
-    prepTimeLabel: 'Tempo di preparazione:',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
     dOrders: 'I MIEI ORDINI',
@@ -58,9 +53,6 @@ const i18n = {
     prep: 'prep',
     btnView: 'VIEW',
     btnCart: '+ ADD',
-    modalDesc: 'Description & Ingredients',
-    modalAdd: 'ADD TO CART',
-    prepTimeLabel: 'Preparation time:',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
     dOrders: 'MY ORDERS',
@@ -88,11 +80,6 @@ const i18n = {
 
 // AVVIO APPLICAZIONE
 document.addEventListener('DOMContentLoaded', () => {
-  const modalEl = document.getElementById('modalMealDetail');
-  if (modalEl && typeof bootstrap !== 'undefined') {
-    mealModalInstance = new bootstrap.Modal(modalEl);
-  }
-
   renderLanguageUI();
   renderCartBadge();
   loadBackendCategories();
@@ -130,8 +117,6 @@ function renderLanguageUI() {
   setT('txt-popular-title', t.popularTitle);
   setT('txt-view-all', t.viewAll);
   setT('btn-cat-all', t.allCat);
-  setT('txt-modal-desc', t.modalDesc);
-  setT('txt-modal-add', t.modalAdd);
 
   // Footer & Modali
   setT('txt-f-service', t.fService);
@@ -157,7 +142,7 @@ function renderLanguageUI() {
 }
 
 /**
- * 2. MOVIMENTO BARRA CATEGORIE SU COMPUTER
+ * 2. MOVIMENTO BARRA CATEGORIE
  */
 function setupBarMovement() {
   const slider = document.querySelector('.categories-bar-wrapper');
@@ -223,7 +208,7 @@ async function loadBackendCategories() {
 }
 
 /**
- * 4. HELPER CREAZIONE CARD PIATTO (CON TASTI "VEDI" E "+ CARRELLO")
+ * 4. HELPER CREAZIONE CARD PIATTO (Porta a meal.html su 'VEDI')
  */
 function createProductCardHtml(meal, prepLabel, customTag = null) {
   const tag = customTag || meal.strCategory || 'MENU';
@@ -238,8 +223,8 @@ function createProductCardHtml(meal, prepLabel, customTag = null) {
     <div class="col-6 col-md-4 col-lg-3">
       <div class="product-card">
         
-        <!-- Immagine cliccabile per aprire i dettagli -->
-        <div class="product-img-wrapper" onclick="openMealDetails('${meal._id}')">
+        <!-- Immagine cliccabile: porta a meal.html -->
+        <div class="product-img-wrapper" onclick="goToMealPage('${meal._id}')">
           <img src="${img}" alt="${meal.strMeal || ''}" loading="lazy">
           <span class="product-tag" ${tagStyle}>${tag}</span>
         </div>
@@ -249,9 +234,9 @@ function createProductCardHtml(meal, prepLabel, customTag = null) {
           <div class="product-price">€ ${priceSafe} &bull; <span class="small">${timeSafe}m ${prepLabel}</span></div>
         </div>
 
-        <!-- GRUPPO TASTI VEDI & + CARRELLO -->
+        <!-- ACTION GROUP: VEDI & + CARRELLO -->
         <div class="card-action-group">
-          <button type="button" class="btn-card-action btn-card-view" onclick="openMealDetails('${meal._id}')">
+          <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${meal._id}')">
             <i class="bi bi-eye"></i> ${t.btnView}
           </button>
           <button type="button" class="btn-card-action btn-card-cart" onclick="addToCart('${meal._id}', '${nameSafe}', ${meal.price || 0})">
@@ -262,6 +247,10 @@ function createProductCardHtml(meal, prepLabel, customTag = null) {
       </div>
     </div>
   `;
+}
+
+function goToMealPage(mealId) {
+  window.location.href = `meal.html?id=${encodeURIComponent(mealId)}`;
 }
 
 /**
@@ -282,13 +271,6 @@ async function loadCatalog() {
       grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${currentLang === 'IT' ? 'NESSUN PRODOTTO PRESENTE.' : 'NO ITEMS AVAILABLE.'}</div>`;
       return;
     }
-
-    // Salva nella cache per la modale
-    meals.forEach(m => {
-      if (!allLoadedMeals.find(x => x._id === m._id)) {
-        allLoadedMeals.push(m);
-      }
-    });
 
     grid.innerHTML = meals.slice(0, 16).map(m => createProductCardHtml(m, t.prep)).join('');
   } catch (err) {
@@ -316,12 +298,6 @@ async function loadRecommendations() {
       
       const t = i18n[currentLang];
 
-      data.recommendations.forEach(m => {
-        if (!allLoadedMeals.find(x => x._id === m._id)) {
-          allLoadedMeals.push(m);
-        }
-      });
-
       if (container) {
         container.innerHTML = data.recommendations.slice(0, 4)
           .map(m => createProductCardHtml(m, t.prep, 'TOP'))
@@ -334,51 +310,7 @@ async function loadRecommendations() {
 }
 
 /**
- * 7. APRE LA MODALE DI DETTAGLIO PIATTO (VIEW)
- */
-function openMealDetails(mealId) {
-  const meal = allLoadedMeals.find(m => m._id === mealId);
-  if (!meal) return;
-
-  const t = i18n[currentLang];
-
-  const modalName = document.getElementById('modal-meal-name');
-  const modalTitle = document.getElementById('modal-meal-title');
-  const modalCategory = document.getElementById('modal-meal-category');
-  const modalPrice = document.getElementById('modal-meal-price');
-  const modalImg = document.getElementById('modal-meal-img');
-  const modalTime = document.getElementById('modal-meal-time');
-  const modalDesc = document.getElementById('modal-meal-desc');
-  const btnAdd = document.getElementById('modal-btn-add-cart');
-
-  if (modalName) modalName.textContent = meal.strMeal || 'DETTAGLIO PIATTO';
-  if (modalTitle) modalTitle.textContent = meal.strMeal || 'Piatto';
-  if (modalCategory) modalCategory.textContent = meal.strCategory || 'MENU';
-  if (modalPrice) modalPrice.textContent = `€ ${(meal.price || 0).toFixed(2)}`;
-  if (modalImg) modalImg.src = meal.strMealThumb || 'https://via.placeholder.com/400x300?text=FastFood';
-  
-  if (modalTime) {
-    modalTime.innerHTML = `<i class="bi bi-clock me-1"></i> ${t.prepTimeLabel} <strong>${meal.preparationTime || 10} min</strong>`;
-  }
-
-  if (modalDesc) {
-    modalDesc.textContent = meal.strInstructions || 'Nessuna descrizione o ingrediente disponibile.';
-  }
-
-  if (btnAdd) {
-    btnAdd.onclick = () => {
-      addToCart(meal._id, meal.strMeal || 'Piatto', meal.price || 0);
-      if (mealModalInstance) mealModalInstance.hide();
-    };
-  }
-
-  if (mealModalInstance) {
-    mealModalInstance.show();
-  }
-}
-
-/**
- * 8. FILTRI
+ * 7. FILTRI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
@@ -388,7 +320,7 @@ function filterCategory(categoryName, btnElement) {
 }
 
 /**
- * 9. CARRELLO
+ * 8. CARRELLO
  */
 function addToCart(mealId, name, price) {
   const item = cart.find(i => i.mealId === mealId);
@@ -412,7 +344,7 @@ function renderCartBadge() {
 }
 
 /**
- * 10. STATO DRAWER AUTENTICAZIONE
+ * 9. STATO DRAWER AUTENTICAZIONE
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');

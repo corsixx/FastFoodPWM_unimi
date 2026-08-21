@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../models/User'); // Modello Mongoose per interrogare la collezione 'users'
 const authMiddleware = require('../middleware/auth'); // Assicurati di averlo importato in cima al file
 const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
@@ -88,6 +89,30 @@ router.get('/', async (req, res) => {
     }
 });
 
+// ============================================================================
+// RECUPERO CATEGORIE UNICHE DAL DATABASE
+// ============================================================================
+/**
+ * @swagger
+ * /api/meals/categories:
+ *   get:
+ *     summary: Recupera l'elenco di tutte le categorie uniche presenti a catalogo
+ *     tags: [Piatti]
+ *     responses:
+ *       200:
+ *         description: Array di stringhe con i nomi delle categorie
+ */
+router.get('/categories', async (req, res) => {
+  try {
+    // distinct restituisce tutti i valori univoci del campo strCategory escludendo i null/vuoti
+    const categories = await Meal.distinct('strCategory');
+    const validCategories = categories.filter(cat => cat && cat.trim() !== '');
+    res.status(200).json(validCategories);
+  } catch (error) {
+    res.status(500).json({ message: "Errore nel recupero delle categorie", error: error.message });
+  }
+});
+
 // ******************************************************************************
 // BACHECA: PIATTI CONSIGLIATI / OFFERTE IN BASE ALLE PREFERENZE (SOLO CLIENTI)
 // ******************************************************************************
@@ -139,6 +164,63 @@ router.get('/recommendations', authMiddleware, async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: "Errore nel recupero dei piatti consigliati.", error: error.message });
+  }
+});
+
+// ******************************************************************************
+// DETTAGLIO SINGOLO PIATTO PER MEAL.HTML
+// ******************************************************************************
+
+/**
+ * @swagger
+ * /api/meals/{id}:
+ *   get:
+ *     summary: Recupera le informazioni dettagliate di un singolo piatto
+ *     tags: [Piatti]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID MongoDB (_id) oppure codice piatto (idMeal)
+ *     responses:
+ *       200:
+ *         description: Dettagli del piatto recuperati con successo
+ *       400:
+ *         description: ID non valido o mancante
+ *       404:
+ *         description: Piatto non trovato
+ *       500:
+ *         description: Errore del server
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ message: "ID piatto mancante o non valido." });
+    }
+
+    let meal = null;
+
+    // 1. Cerca per ObjectId MongoDB valido
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      meal = await Meal.findById(id);
+    }
+
+    // 2. Se non lo trova, prova la ricerca su idMeal alternativo
+    if (!meal) {
+      meal = await Meal.findOne({ idMeal: id });
+    }
+
+    if (!meal) {
+      return res.status(404).json({ message: "Piatto non trovato nel catalogo." });
+    }
+
+    res.status(200).json(meal);
+  } catch (error) {
+    res.status(500).json({ message: "Errore nel recupero del piatto.", error: error.message });
   }
 });
 
@@ -205,7 +287,6 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ******************************************************************************
 // GESTIONE AMMINISTRATORE: MODIFICA PIATTO GLOBALE
 // ******************************************************************************
@@ -261,7 +342,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-
 // ******************************************************************************
 // GESTIONE AMMINISTRATORE: ELIMINAZIONE PIATTO GLOBALE
 // ******************************************************************************
@@ -307,27 +387,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// ============================================================================
-// RECUPERO CATEGORIE UNICHE DAL DATABASE
-// ============================================================================
-/**
- * @swagger
- * /api/meals/categories:
- *   get:
- *     summary: Recupera l'elenco di tutte le categorie uniche presenti a catalogo
- *     tags: [Piatti]
- *     responses:
- *       200:
- *         description: Array di stringhe con i nomi delle categorie
- */
-router.get('/categories', async (req, res) => {
-  try {
-    // distinct restituisce tutti i valori univoci del campo strCategory escludendo i null/vuoti
-    const categories = await Meal.distinct('strCategory');
-    const validCategories = categories.filter(cat => cat && cat.trim() !== '');
-    res.status(200).json(validCategories);
-  } catch (error) {
-    res.status(500).json({ message: "Errore nel recupero delle categorie", error: error.message });
-  }
-});
 module.exports = router;
