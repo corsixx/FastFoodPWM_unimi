@@ -1,5 +1,8 @@
 // public/js/catalog.js
 
+const ITEMS_PER_PAGE = 8; // 8 piatti per pagina (2 righe piene su desktop)
+let currentPage = 1;
+
 let currentCategory = '';
 let currentSearch = '';
 let currentSort = 'default';
@@ -7,7 +10,6 @@ let rawMealsList = [];
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentLang = localStorage.getItem('appLang') || 'IT';
 
-// Dizionario testi per la pagina catalogo
 const i18n = {
   IT: {
     btn: 'IT 🇮🇹',
@@ -24,6 +26,8 @@ const i18n = {
     foundItems: 'piatti trovati',
     noItems: 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.',
     loading: 'CARICAMENTO CATALOGO IN CORSO...',
+    prev: 'Precedente',
+    next: 'Successivo',
     dCatalog: 'CATALOGO COMPLETO',
     dRestaurants: 'I NOSTRI RISTORANTI',
     dOrders: 'I MIEI ORDINI',
@@ -62,6 +66,8 @@ const i18n = {
     foundItems: 'dishes found',
     noItems: 'NO DISHES FOUND MATCHING YOUR FILTERS.',
     loading: 'LOADING CATALOG ITEMS...',
+    prev: 'Previous',
+    next: 'Next',
     dCatalog: 'FULL CATALOG',
     dRestaurants: 'OUR RESTAURANTS',
     dOrders: 'MY ORDERS',
@@ -87,7 +93,6 @@ const i18n = {
   }
 };
 
-// AVVIO PAGINA
 document.addEventListener('DOMContentLoaded', () => {
   renderLanguageUI();
   renderCartBadge();
@@ -105,7 +110,7 @@ function toggleLanguage() {
   localStorage.setItem('appLang', currentLang);
   renderLanguageUI();
   renderDrawerAuth();
-  renderMeals(getFilteredAndSortedMeals());
+  updateView();
   loadBackendCategories();
 }
 
@@ -121,7 +126,6 @@ function renderLanguageUI() {
   setT('txt-catalog-title', t.catalogTitle);
   setT('btn-cat-all', t.allCat);
 
-  // Input & Select
   const searchInput = document.getElementById('search-input');
   if (searchInput) searchInput.placeholder = t.searchPlaceholder;
 
@@ -131,7 +135,6 @@ function renderLanguageUI() {
   setT('opt-sort-time', t.sortTime);
   setT('opt-sort-name', t.sortName);
 
-  // Footer & Modali
   setT('txt-f-service', t.fService);
   setT('txt-f-how', t.fHow);
   setT('txt-f-pickup', t.fPickup);
@@ -147,7 +150,6 @@ function renderLanguageUI() {
   setT('txt-m-legal-title', t.mLegalTitle);
   setT('txt-m-legal-body', t.mLegalBody);
 
-  // Drawer
   setT('txt-d-catalog', t.dCatalog);
   setT('txt-d-restaurants', t.dRestaurants);
   setT('txt-d-orders', t.dOrders);
@@ -155,7 +157,7 @@ function renderLanguageUI() {
 }
 
 /**
- * 2. CARICA CATEGORIE DAL DATABASE
+ * 2. CARICA CATEGORIE
  */
 async function loadBackendCategories() {
   const navContainer = document.getElementById('categories-nav');
@@ -185,7 +187,7 @@ async function loadBackendCategories() {
 }
 
 /**
- * 3. CARICA TUTTI I PIATTI DAL DATABASE (SENZA LIMITI)
+ * 3. CARICA TUTTI I PIATTI DAL SERVER
  */
 async function loadFullCatalog() {
   const grid = document.getElementById('meals-grid');
@@ -197,24 +199,23 @@ async function loadFullCatalog() {
   try {
     const meals = await apiRequest('/meals');
     rawMealsList = meals || [];
-    renderMeals(getFilteredAndSortedMeals());
+    currentPage = 1;
+    updateView();
   } catch (err) {
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore durante il caricamento del catalogo.</div>`;
+    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento catalogo piatti.</div>`;
   }
 }
 
 /**
- * 4. FILTRA E ORDINA L'ELENCO DEI PIATTI
+ * 4. FILTRI E ORDINAMENTO
  */
 function getFilteredAndSortedMeals() {
   let list = [...rawMealsList];
 
-  // Filtro Categoria
   if (currentCategory) {
     list = list.filter(m => m.strCategory && m.strCategory.toLowerCase() === currentCategory.toLowerCase());
   }
 
-  // Filtro Ricerca Testuale
   if (currentSearch) {
     const term = currentSearch.toLowerCase();
     list = list.filter(m => 
@@ -223,7 +224,6 @@ function getFilteredAndSortedMeals() {
     );
   }
 
-  // Ordinamento
   if (currentSort === 'price-asc') {
     list.sort((a, b) => (a.price || 0) - (b.price || 0));
   } else if (currentSort === 'price-desc') {
@@ -238,18 +238,38 @@ function getFilteredAndSortedMeals() {
 }
 
 /**
- * 5. RENDERING DELLA GRIGLIA PRODOTTI
+ * 5. AGGIORNA GRIGLIA E PAGINAZIONE
  */
-function renderMeals(meals) {
-  const grid = document.getElementById('meals-grid');
+function updateView() {
+  const allFiltered = getFilteredAndSortedMeals();
+  const totalItems = allFiltered.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+
   const countLabel = document.getElementById('results-count');
+  const t = i18n[currentLang];
+  if (countLabel) {
+    countLabel.textContent = `${totalItems} ${t.foundItems}`;
+  }
+
+  // Estrai gli 8 elementi della pagina attiva
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageMeals = allFiltered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  renderMealsGrid(pageMeals);
+  renderPaginationControls(totalPages);
+}
+
+/**
+ * 6. RENDERING DELLE CARD (CICLATE IN JS)
+ */
+function renderMealsGrid(meals) {
+  const grid = document.getElementById('meals-grid');
   if (!grid) return;
 
   const t = i18n[currentLang];
-
-  if (countLabel) {
-    countLabel.textContent = `${meals.length} ${t.foundItems}`;
-  }
 
   if (meals.length === 0) {
     grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.noItems}</div>`;
@@ -271,27 +291,77 @@ function renderMeals(meals) {
 }
 
 /**
- * 6. HANDLERS FILTRI E SEARCH
+ * 7. RENDERING PULSANTI PAGINAZIONE BOOTSTRAP
+ */
+function renderPaginationControls(totalPages) {
+  const container = document.getElementById('pagination-controls');
+  if (!container) return;
+
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const t = i18n[currentLang];
+  let html = '';
+
+  // Tasto Precedente
+  html += `
+    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+      <button class="page-link text-dark rounded-0 border-dark shadow-none" onclick="goToPage(${currentPage - 1})">${t.prev}</button>
+    </li>
+  `;
+
+  // Tasti Pagine Numerati
+  for (let i = 1; i <= totalPages; i++) {
+    const isActive = i === currentPage;
+    html += `
+      <li class="page-item ${isActive ? 'active' : ''}">
+        <button class="page-link ${isActive ? 'bg-black border-dark text-white' : 'text-dark border-dark'} rounded-0 shadow-none" onclick="goToPage(${i})">${i}</button>
+      </li>
+    `;
+  }
+
+  // Tasto Successivo
+  html += `
+    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+      <button class="page-link text-dark rounded-0 border-dark shadow-none" onclick="goToPage(${currentPage + 1})">${t.next}</button>
+    </li>
+  `;
+
+  container.innerHTML = html;
+}
+
+function goToPage(page) {
+  currentPage = page;
+  updateView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * 8. HANDLERS EVENTI
  */
 function filterCategory(categoryName, btnElement) {
   currentCategory = categoryName;
+  currentPage = 1;
   document.querySelectorAll('.nav-category-link').forEach(el => el.classList.remove('active'));
   if (btnElement) btnElement.classList.add('active');
-  renderMeals(getFilteredAndSortedMeals());
+  updateView();
 }
 
 function handleSearch(val) {
   currentSearch = val.trim();
-  renderMeals(getFilteredAndSortedMeals());
+  currentPage = 1;
+  updateView();
 }
 
 function handleSort(val) {
   currentSort = val;
-  renderMeals(getFilteredAndSortedMeals());
+  updateView();
 }
 
 /**
- * 7. CARRELLO
+ * 9. CARRELLO
  */
 function addToCart(mealId, name, price) {
   const item = cart.find(i => i.mealId === mealId);
@@ -315,7 +385,7 @@ function renderCartBadge() {
 }
 
 /**
- * 8. MOVIMENTO BARRA CATEGORIE
+ * 10. SCORRIMENTO BARRA CATEGORIE
  */
 function setupBarMovement() {
   const slider = document.querySelector('.categories-bar-wrapper');
@@ -351,7 +421,7 @@ function setupBarMovement() {
 }
 
 /**
- * 9. STATO DRAWER UTENTE
+ * 11. STATO DRAWER UTENTE
  */
 function renderDrawerAuth() {
   const token = localStorage.getItem('token');

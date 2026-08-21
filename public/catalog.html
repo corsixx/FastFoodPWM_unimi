@@ -58,27 +58,23 @@
       </div>
     </header>
 
-    <!-- 3. CONTENUTO PRINCIPALE CATALOGO -->
+    <!-- 3. CONTENUTO CATALOGO -->
     <main class="container-fluid px-3 px-md-4 py-5">
       
       <!-- INTESTAZIONE CATALOGO CON SEARCH E ORDINAMENTO -->
       <div class="row g-3 align-items-center justify-content-between mb-4 pb-3 border-bottom">
         
-        <!-- Titolo e Contatore Risultati -->
         <div class="col-12 col-md-4">
           <h5 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;" id="txt-catalog-title">MENU COMPLETO</h5>
           <span class="small text-muted" id="results-count">0 piatti trovati</span>
         </div>
 
-        <!-- Barra di Ricerca e Select Ordinamento -->
         <div class="col-12 col-md-8 d-flex flex-column flex-sm-row gap-2 justify-content-md-end">
-          <!-- Campo Cerca -->
           <div class="input-group input-group-sm" style="max-width: 280px;">
             <span class="input-group-text bg-white border-dark rounded-0"><i class="bi bi-search"></i></span>
             <input type="text" id="search-input" class="form-control rounded-0 border-dark shadow-none" placeholder="Cerca piatto o ingrediente..." oninput="handleSearch(this.value)">
           </div>
 
-          <!-- Filtro Ordinamento -->
           <div style="max-width: 200px;">
             <select id="sort-select" class="form-select form-select-sm rounded-0 border-dark shadow-none" onchange="handleSort(this.value)">
               <option value="default" id="opt-sort-default">Ordina: Predefinito</option>
@@ -92,8 +88,15 @@
 
       </div>
 
-      <!-- GRIGLIA COMPLETA DEI PIATTI -->
+      <!-- GRIGLIA PRODOTTI PAGINATA -->
       <div class="row g-3 g-md-4" id="meals-grid"></div>
+
+      <!-- CONTROLLI PAGINAZIONE -->
+      <div class="d-flex justify-content-center align-items-center mt-5">
+        <nav>
+          <ul class="pagination pagination-sm m-0" id="pagination-controls"></ul>
+        </nav>
+      </div>
 
     </main>
 
