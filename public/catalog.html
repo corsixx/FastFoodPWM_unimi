@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood // Full Catalog</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+
+    <!-- 1. TOP ANNOUNCEMENT BAR -->
+    <div class="top-bar text-center" id="txt-announcement">
+      Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
+    </div>
+
+    <!-- 2. HEADER -->
+    <header class="main-header">
+      <div class="container-fluid px-3 px-md-4 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          
+          <!-- Logo FastFood -->
+          <div>
+            <a href="index.html" class="brand-logo">FastFood</a>
+          </div>
+
+          <!-- Strumenti a destra -->
+          <div class="d-flex align-items-center gap-3">
+            <!-- Pulsante Lingua -->
+            <button class="lang-switch-btn" id="lang-btn" onclick="toggleLanguage()">
+              IT 🇮🇹
+            </button>
+
+            <!-- Carrello / Ordini -->
+            <a href="orders.html" class="header-tools-link position-relative">
+              <i class="bi bi-box-seam fs-5"></i>
+              <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-black" style="font-size: 0.6rem;">0</span>
+            </a>
+
+            <!-- Menu Hamburger -->
+            <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
+              <i class="bi bi-list fs-4"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Barra Categorie Centrata e Scorrevole -->
+      <div class="categories-bar-wrapper">
+        <nav class="categories-scroll-container" id="categories-nav">
+          <button class="nav-category-link active" onclick="filterCategory('', this)" id="btn-cat-all">ALL / TUTTO</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- 3. CONTENUTO PRINCIPALE CATALOGO -->
+    <main class="container-fluid px-3 px-md-4 py-5">
+      
+      <!-- INTESTAZIONE CATALOGO CON SEARCH E ORDINAMENTO -->
+      <div class="row g-3 align-items-center justify-content-between mb-4 pb-3 border-bottom">
+        
+        <!-- Titolo e Contatore Risultati -->
+        <div class="col-12 col-md-4">
+          <h5 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;" id="txt-catalog-title">MENU COMPLETO</h5>
+          <span class="small text-muted" id="results-count">0 piatti trovati</span>
+        </div>
+
+        <!-- Barra di Ricerca e Select Ordinamento -->
+        <div class="col-12 col-md-8 d-flex flex-column flex-sm-row gap-2 justify-content-md-end">
+          <!-- Campo Cerca -->
+          <div class="input-group input-group-sm" style="max-width: 280px;">
+            <span class="input-group-text bg-white border-dark rounded-0"><i class="bi bi-search"></i></span>
+            <input type="text" id="search-input" class="form-control rounded-0 border-dark shadow-none" placeholder="Cerca piatto o ingrediente..." oninput="handleSearch(this.value)">
+          </div>
+
+          <!-- Filtro Ordinamento -->
+          <div style="max-width: 200px;">
+            <select id="sort-select" class="form-select form-select-sm rounded-0 border-dark shadow-none" onchange="handleSort(this.value)">
+              <option value="default" id="opt-sort-default">Ordina: Predefinito</option>
+              <option value="price-asc" id="opt-sort-price-asc">Prezzo: Crescente</option>
+              <option value="price-desc" id="opt-sort-price-desc">Prezzo: Decrescente</option>
+              <option value="time-asc" id="opt-sort-time">Tempo preparazione</option>
+              <option value="name-asc" id="opt-sort-name">Nome (A - Z)</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- GRIGLIA COMPLETA DEI PIATTI -->
+      <div class="row g-3 g-md-4" id="meals-grid"></div>
+
+    </main>
+
+    <!-- 4. FOOTER -->
+    <footer class="main-footer">
+      <div class="container-fluid px-3 px-md-4">
+        <div class="row g-4">
+          
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-service">SERVIZIO</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-how">Come Ordinare</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-pickup">Ritiro al Bancone</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-wait">Tempi di Attesa</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-partner">PARTNER</div>
+            <a href="register.html" class="footer-link" id="txt-f-join">Diventa un Ristorante Partner</a>
+            <a href="login.html" class="footer-link" id="txt-f-manage">Accedi al Gestionale</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-support">SUPPORTO</div>
+            <a href="mailto:support@fastfood.local" class="footer-link" id="txt-f-contact">Contatta Assistenza</a>
+            <span class="footer-link text-muted" id="txt-f-chat">Chat 24/7 Attiva</span>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-legal">LEGAL</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal" id="txt-f-terms">Privacy & Termini</a>
+            <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
+          </div>
+
+        </div>
+      </div>
+    </footer>
+
+    <!-- MODALI RAPIDE -->
+    <div class="modal fade" id="modalInfo" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-info-title">Informazioni Servizio</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-info-body">
+            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalLegal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="txt-m-legal-title">Termini & Note Legali</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted" id="txt-m-legal-body">
+            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. MENU OFFCANVAS LATERALE -->
+    <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
+      <div class="offcanvas-header justify-content-end pb-0">
+        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
+      </div>
+      
+      <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
+        <div>
+          <a href="catalog.html" class="drawer-nav-item"><span id="txt-d-catalog">CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="restaurants.html" class="drawer-nav-item"><span id="txt-d-restaurants">I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="orders.html" class="drawer-nav-item"><span id="txt-d-orders">I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link"><span id="txt-d-stats">STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
+        </div>
+
+        <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/catalog.js"></script>
+  </body>
+</html>
