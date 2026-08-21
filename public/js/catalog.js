@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderLanguageUI();
   renderCartBadge();
+  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
   loadBackendCategories();
   loadFullCatalog();
   renderDrawerAuth();
@@ -199,15 +200,23 @@ async function loadBackendCategories() {
 }
 
 async function loadFullCatalog() {
-  const grid = document.getElementById('meals-grid');
+  const grid = document.getElementById('catalog-grid') || document.getElementById('meals-grid');
   if (!grid) return;
 
   const t = i18n[currentLang];
-  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.loading}</div>`;
+  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm me-2"></div>${t.loading}</div>`;
 
   try {
-    const meals = await apiRequest('/meals');
-    rawMealsList = meals || [];
+    const res = await apiRequest('/meals');
+    
+    // Gestione formato dati (array diretto o oggetto contenente { meals: [...] })
+    if (Array.isArray(res)) {
+      rawMealsList = res;
+    } else if (res && Array.isArray(res.meals)) {
+      rawMealsList = res.meals;
+    } else {
+      rawMealsList = [];
+    }
 
     if (currentRestaurantFilter) {
       const banner = document.getElementById('restaurant-filter-banner');
@@ -230,7 +239,8 @@ function getFilteredAndSortedMeals() {
   if (currentRestaurantFilter) {
     list = list.filter(m => 
       m.restaurantId === currentRestaurantFilter || 
-      m.restaurant === currentRestaurantFilter
+      m.restaurant === currentRestaurantFilter ||
+      (m.availableRestaurants && m.availableRestaurants.some(r => (r._id || r) === currentRestaurantFilter))
     );
   }
 
@@ -267,7 +277,7 @@ function updateView() {
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
-  const countLabel = document.getElementById('results-count');
+  const countLabel = document.getElementById('results-count') || document.getElementById('catalog-count-label');
   const t = i18n[currentLang];
   if (countLabel) {
     countLabel.textContent = `${totalItems} ${t.foundItems}`;
@@ -281,7 +291,7 @@ function updateView() {
 }
 
 function renderMealsGrid(meals) {
-  const grid = document.getElementById('meals-grid');
+  const grid = document.getElementById('catalog-grid') || document.getElementById('meals-grid');
   if (!grid) return;
 
   const t = i18n[currentLang];
@@ -292,14 +302,16 @@ function renderMealsGrid(meals) {
   }
 
   grid.innerHTML = meals.map(m => {
-    const hasRest = m.restaurantId || m.restaurant;
+    const hasRest = m.restaurantId || m.restaurant || (Array.isArray(m.availableRestaurants) && m.availableRestaurants.length > 0);
+    const cleanName = (m.strMeal || 'Piatto').replace(/'/g, "\\'");
+    const thumbUrl = m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood';
 
     return `
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card">
           
           <div class="product-img-wrapper" onclick="goToMealPage('${m._id}')">
-            <img src="${m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood'}" alt="${m.strMeal || ''}" loading="lazy">
+            <img src="${thumbUrl}" alt="${m.strMeal || ''}" loading="lazy">
             <span class="product-tag">${m.strCategory || 'MENU'}</span>
           </div>
 
@@ -317,7 +329,7 @@ function renderMealsGrid(meals) {
               <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
                 <i class="bi bi-eye"></i> ${t.btnView}
               </button>
-              <button type="button" class="btn-card-action btn-card-cart" onclick="addToCart('${m._id}', '${(m.strMeal || 'Piatto').replace(/'/g, "\\'")}', ${m.price || 0})">
+              <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}', '${cleanName}', ${m.price || 0}, '${thumbUrl}')">
                 <i class="bi bi-bag-plus"></i> ${t.btnCart}
               </button>
             ` : `
@@ -398,22 +410,8 @@ function resetRestaurantFilter() {
   updateView();
 }
 
-function addToCart(mealId, name, price) {
-  const item = cart.find(i => i.mealId === mealId);
-  if (item) item.quantity += 1;
-  else cart.push({ mealId, name, price, quantity: 1 });
-
-  localStorage.setItem('cart', JSON.stringify(cart));
-  renderCartBadge();
-
-  const badge = document.getElementById('cart-badge');
-  if (badge) {
-    badge.classList.add('bg-warning', 'text-dark');
-    setTimeout(() => badge.classList.remove('bg-warning', 'text-dark'), 300);
-  }
-}
-
 function renderCartBadge() {
+  cart = JSON.parse(localStorage.getItem('cart')) || [];
   const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
   const badge = document.getElementById('cart-badge');
   if (badge) badge.textContent = count;
@@ -463,7 +461,6 @@ function renderDrawerAuth() {
   const currentLang = localStorage.getItem('appLang') || 'IT';
   const isIt = currentLang === 'IT';
 
-  // Se è un ristorante, rendiamo visibile il link alle statistiche/gestionale
   const statsLink = document.getElementById('drawer-stats-link');
   if (statsLink && role === 'restaurant') {
     statsLink.classList.remove('d-none');
@@ -478,13 +475,11 @@ function renderDrawerAuth() {
         ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
       </div>
 
-      <!-- Tasto Vai al Profilo -->
       <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
         <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
         <i class="bi bi-arrow-right"></i>
       </a>
 
-      <!-- Tasto Logout -->
       <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
         ${isIt ? 'Logout' : 'Logout'}
       </button>

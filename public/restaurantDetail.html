@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood // Scheda Ristorante</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+
+    <!-- 1. TOP ANNOUNCEMENT BAR -->
+    <div class="top-bar text-center" id="txt-announcement">
+      Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
+    </div>
+
+    <!-- 2. HEADER -->
+    <header class="main-header">
+      <div class="container-fluid px-3 px-md-4 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+          
+          <div>
+            <a href="index.html" class="brand-logo">FastFood</a>
+          </div>
+
+          <div class="d-flex align-items-center gap-3">
+            <button class="lang-switch-btn" id="lang-btn" onclick="toggleLanguage()">
+              IT 🇮🇹
+            </button>
+
+            <!-- Carrello Drawer Trigger -->
+            <button class="btn p-0 border-0 header-tools-link position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas" aria-controls="cartOffcanvas" title="Carrello">
+              <i class="bi bi-box-seam fs-5"></i>
+              <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-black" style="font-size: 0.6rem;">0</span>
+            </button>
+
+            <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
+              <i class="bi bi-list fs-4"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Barra Categorie Piatti del Locale -->
+      <div class="categories-bar-wrapper">
+        <nav class="categories-scroll-container" id="restaurant-categories-nav">
+          <button class="nav-category-link active" onclick="filterRestaurantMenu('', this)" id="btn-cat-all">TUTTO IL MENU</button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- 3. DETTAGLI RISTORANTE (HERO CARD) -->
+    <section class="container-fluid px-3 px-md-4 pt-4">
+      <div class="border border-dark p-4 p-md-5 bg-white">
+        
+        <div class="row g-4 align-items-center">
+          <div class="col-12 col-md-8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" id="txt-badge-partner">RISTORANTE PARTNER</span>
+              <span class="badge bg-success rounded-0 text-uppercase py-1 px-2" id="rest-status-badge">APERTO ORA</span>
+            </div>
+
+            <h2 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;" id="rest-name-display">
+              CARICAMENTO LOCALE...
+            </h2>
+
+            <div class="d-flex flex-column flex-sm-row gap-sm-4 text-muted small mt-3">
+              <div id="rest-addr-display">
+                <i class="bi bi-geo-alt text-dark me-1"></i> Caricamento indirizzo...
+              </div>
+              <div id="rest-phone-display">
+                <i class="bi bi-telephone text-dark me-1"></i> --
+              </div>
+              <div id="rest-piva-display">
+                <i class="bi bi-building text-dark me-1"></i> P.IVA: --
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4 text-md-end border-top border-md-top-0 pt-3 pt-md-0">
+            <div class="small text-muted text-uppercase mb-1" id="txt-pickup-mode">MODALITÀ DI RITIRO</div>
+            <div class="fw-bold text-uppercase fs-6 mb-2" id="txt-pickup-desc">RITIRO AL BANCONE DIRETTO</div>
+            <span class="badge border border-dark text-dark rounded-0 px-2 py-1 small" id="txt-prep-time-avg">Prep. media: 15-20 min</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. MENU DEI PIATTI DISPONIBILI -->
+    <main class="container-fluid px-3 px-md-4 py-5">
+      
+      <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-1" id="txt-badge-menu">MENU DEL LOCALE</span>
+          <h5 class="text-uppercase fw-bold m-0" style="letter-spacing: 0.05em;" id="txt-menu-title">
+            PIATTI PREPARATI DA QUESTO RISTORANTE
+          </h5>
+        </div>
+        <div>
+          <span class="small text-muted" id="meals-count-label">0 piatti disponibili</span>
+        </div>
+      </div>
+
+      <!-- Griglia Piatti -->
+      <div class="row g-3 g-md-4" id="restaurant-meals-grid">
+        <div class="col-12 text-center py-5 text-muted small">
+          <div class="spinner-border spinner-border-sm me-2"></div>Caricamento menu in corso...
+        </div>
+      </div>
+
+    </main>
+
+    <!-- 5. FOOTER -->
+    <footer class="main-footer mt-5">
+      <div class="container-fluid px-3 px-md-4">
+        <div class="row g-4">
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-service">SERVIZIO</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-how">Come Ordinare</a>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo" id="txt-f-pickup">Ritiro al Bancone</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-partner">PARTNER</div>
+            <a href="register.html" class="footer-link" id="txt-f-join">Diventa un Ristorante Partner</a>
+            <a href="login.html" class="footer-link" id="txt-f-manage">Accedi al Gestionale</a>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-support">SUPPORTO</div>
+            <a href="mailto:support@fastfood.local" class="footer-link" id="txt-f-contact">Contatta Assistenza</a>
+            <span class="footer-link text-muted" id="txt-f-chat">Chat 24/7 Attiva</span>
+          </div>
+
+          <div class="col-6 col-md-3">
+            <div class="footer-title" id="txt-f-legal">LEGAL</div>
+            <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalLegal" id="txt-f-terms">Privacy & Termini</a>
+            <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- POP-UP LATERALE: SIDE-CART (CARRELLO) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel" style="width: 380px; border-left: 2px solid #000;">
+      <div class="offcanvas-header border-bottom py-3">
+        <div>
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-1" style="font-size: 0.65rem;">IL TUO ORDINE</span>
+          <h5 class="offcanvas-title fw-bold text-uppercase m-0" id="cartOffcanvasLabel" style="font-family: 'Space Grotesk', sans-serif;">
+            CARRELLO (<span id="drawer-cart-total-qty">0</span>)
+          </h5>
+        </div>
+        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+
+      <div class="offcanvas-body d-flex flex-column justify-content-between p-0">
+        <div id="drawer-cart-items-container" class="p-3 d-flex flex-column gap-2 overflow-y-auto" style="max-height: calc(100vh - 210px);"></div>
+
+        <div class="border-top p-3 bg-light">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-muted text-uppercase fw-bold">Totale Ordine:</span>
+            <span class="fs-5 fw-bold font-monospace" id="drawer-cart-subtotal">€ 0.00</span>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger rounded-0 btn-sm py-2 px-3 fw-bold text-uppercase" onclick="clearCart()" title="Svuota Carrello">
+              <i class="bi bi-trash"></i>
+            </button>
+            <a href="orders.html" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase text-center d-flex justify-content-between align-items-center px-3" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;">
+              <span>VAI AL CHECKOUT</span>
+              <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALE DETTAGLIO PIATTO (VIEW) -->
+    <div class="modal fade" id="modalMealDetail" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase" id="modal-meal-name">DETTAGLI PIATTO</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="row g-4">
+              <div class="col-12 col-md-6">
+                <img id="modal-meal-img" src="" alt="Piatto" class="img-fluid border" style="width: 100%; aspect-ratio: 3/4; object-fit: cover;">
+              </div>
+              <div class="col-12 col-md-6 d-flex flex-column justify-content-between">
+                <div>
+                  <span class="badge bg-black rounded-0 text-uppercase mb-2" id="modal-meal-category">CATEGORIA</span>
+                  <h4 class="fw-bold text-uppercase mb-1" id="modal-meal-title">NOME PIATTO</h4>
+                  <div class="fs-5 fw-bold mb-3" id="modal-meal-price">€ 0.00</div>
+                  <div class="small text-muted mb-3" id="modal-meal-time">
+                    <i class="bi bi-clock me-1"></i> Tempo di preparazione: <strong>15 min</strong>
+                  </div>
+                  <h6 class="fw-bold text-uppercase small border-bottom pb-1 mb-2">Descrizione & Ingredienti</h6>
+                  <p class="small text-muted" id="modal-meal-desc" style="max-height: 160px; overflow-y: auto;">-</p>
+                </div>
+                <div class="mt-4 pt-3 border-top d-flex gap-2" id="modal-meal-actions"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. OFFCANVAS DRAWER -->
+    <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
+      <div class="offcanvas-header justify-content-end pb-0">
+        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
+        <div>
+          <a href="catalog.html" class="drawer-nav-item"><span id="txt-d-catalog">CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="restaurantCatalog.html" class="drawer-nav-item active"><span id="txt-d-restaurants">I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="orders.html" class="drawer-nav-item"><span id="txt-d-orders">I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
+          <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link"><span id="txt-d-stats">STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
+        </div>
+        <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
+      </div>
+    </div>
+
+    <!-- Modali Informative -->
+    <div class="modal fade" id="modalInfo" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase">Informazioni Servizio</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted">
+            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalLegal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-dark">
+          <div class="modal-header border-bottom">
+            <h6 class="modal-title fw-bold text-uppercase">Termini & Note Legali</h6>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body small text-muted">
+            Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/restaurantDetail.js"></script>
+  </body>
+</html>
