@@ -394,5 +394,27 @@ router.delete('/me', authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Errore durante l'eliminazione dell'account.", error: error.message });
   }
 });
-
+/**
+ * @swagger
+ * /auth/restaurants:
+ *   get:
+ *     summary: Recupera la lista di tutti i ristoranti partner
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Lista ristoranti recuperata con successo
+ */
+router.get('/restaurants', async (req, res) => {
+  try {
+    // 1. Cerca nel DB tutti gli utenti registrati con ruolo 'restaurant'
+    // 2. Esclude la password per sicurezza (.select('-password'))
+    const restaurants = await User.find({ role: 'restaurant' }).select('-password');
+    
+    // Restituisce l'array JSON
+    res.json(restaurants);
+  } catch (err) {
+    console.error("Errore recupero ristoranti:", err);
+    res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti." });
+  }
+});
 module.exports = router;
