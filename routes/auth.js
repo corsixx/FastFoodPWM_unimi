@@ -374,30 +374,6 @@ router.delete('/me', authMiddleware, async (req, res) => {
 });
 
 // ============================================================================
-// ROTTA 6: LISTA PUBBLICA DEI RISTORANTI PARTNER (GET /api/auth/restaurants)
-// ============================================================================
-/**
- * @swagger
- * /api/auth/restaurants:
- *   get:
- *     summary: Recupera la lista di tutti i ristoranti partner registrati
- *     tags: [Autenticazione]
- *     responses:
- *       200:
- *         description: Lista ristoranti partner recuperata con successo
- *       500:
- *         description: Errore del server
- */
-router.get('/restaurants', async (req, res) => {
-  try {
-    const restaurants = await User.find({ role: 'restaurant' }).select('-password');
-    res.status(200).json(restaurants);
-  } catch (err) {
-    console.error("Errore recupero ristoranti:", err);
-    res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti.", error: err.message });
-  }
-});
-// ============================================================================
 // ROTTA 6: LISTA PUBBLICA DEI RISTORANTI PARTNER CON COPERTINA DA PIATTO REALE
 // ============================================================================
 /**
@@ -445,4 +421,72 @@ router.get('/restaurants', async (req, res) => {
     res.status(500).json({ message: "Errore del server durante il recupero dei ristoranti.", error: err.message });
   }
 });
+
+// ============================================================================
+// ROTTA 7: CAMBIO PASSWORD (PUT /api/auth/password)
+// ============================================================================
+/**
+ * @swagger
+ * /api/auth/password:
+ *   put:
+ *     summary: Aggiorna la password dell'utente autenticato
+ *     description: Verifica la password attuale, poi la sostituisce con la nuova cifrandola.
+ *     tags: [Autenticazione]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - currentPassword
+ *               - newPassword
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password aggiornata con successo
+ *       400:
+ *         description: Password attuale errata o dati mancanti
+ *       404:
+ *         description: Utente non trovato
+ */
+router.put('/password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Inserisci sia la password attuale che la nuova.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nuova password deve contenere almeno 6 caratteri.' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Utente non trovato.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'La password attuale non è corretta.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: 'Password aggiornata con successo.' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Errore durante il cambio password.', error: error.message });
+  }
+});
+
 module.exports = router;
