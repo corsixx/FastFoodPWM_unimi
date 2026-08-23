@@ -20,7 +20,7 @@ const authMiddleware = require('../middleware/auth');
  * /api/orders:
  *   post:
  *     summary: Invia un nuovo ordine con calcolo dinamico del tempo di attesa (Solo Clienti)
- *     description: Verifica i piatti nel carrello, congela i prezzi dal database per sicurezza, calcola il tempo basandosi sulla cottura del piatto più lento e sulla coda di comande del locale.
+ *     description: Verifica i piatti nel carrello, congela i prezzi dal database per sicurezza, calcola il tempo basandosi sulla cottura del piatto più lento e sulla somma della coda reale del locale.
  *     tags: [Ordini]
  *     security:
  *       - bearerAuth: []
@@ -85,16 +85,14 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Ristorante non trovato nel sistema." });
     }
 
-    // 4. Elaborazione carrello, congelamento prezzi e calcolo tempo di cottura
+    // 4. Elaborazione carrello, congelamento prezzi e calcolo tempo di cottura del piatto più lento
     let calculatedTotal = 0;
-    let maxDishPrepTime = 0; // Memorizza il tempo di preparazione del piatto più lento
+    let maxDishPrepTime = 0;
     const orderItems = [];
 
     for (const item of items) {
-      // Interroga MongoDB per recuperare il piatto reale
       const mealDoc = await Meal.findById(item.mealId);
       
-      // Risoluzione sicura del prezzo al centesimo (evita fallback errati a 20€)
       let unitPrice = 8.50;
       if (mealDoc && mealDoc.price !== undefined && mealDoc.price !== null && !isNaN(mealDoc.price)) {
         unitPrice = Number(mealDoc.price);
@@ -107,13 +105,11 @@ router.post('/', authMiddleware, async (req, res) => {
       const qty = Number(item.quantity) || 1;
       calculatedTotal += unitPrice * qty;
 
-      // Legge il tempo di preparazione del piatto o usa 10 minuti di fallback
       const dishPrepTime = (mealDoc && mealDoc.preparationTime) ? Number(mealDoc.preparationTime) : 10;
       if (dishPrepTime > maxDishPrepTime) {
         maxDishPrepTime = dishPrepTime;
       }
 
-      // Snapshot del piatto nello scontrino
       orderItems.push({
         meal: mealDoc ? mealDoc._id : item.mealId,
         name: mealDoc ? mealDoc.strMeal : (item.name || 'Piatto'),
@@ -122,13 +118,17 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    // 5. Calcolo ritardo dovuto alla coda di ordini non ancora completati (ordinati o in preparazione)
-    const ordersInQueue = await Order.countDocuments({
+    // 5. Calcolo sequenziale reale: somma i tempi stimati di tutti gli ordini precedenti non ancora completati
+    const activeOrdersInQueue = await Order.find({
       restaurant: restaurantId,
       status: { $in: ['ordinato', 'in preparazione'] }
     });
 
-    const queueDelayMinutes = ordersInQueue * 5; // 5 minuti per ciascun ordine che precede
+    let queueDelayMinutes = 0;
+    for (const activeOrder of activeOrdersInQueue) {
+      queueDelayMinutes += Number(activeOrder.estimatedWaitTimeMinutes) || 15;
+    }
+
     const totalEstimatedMinutes = maxDishPrepTime + queueDelayMinutes;
 
     // 6. Creazione e salvataggio del documento ordine
@@ -151,7 +151,7 @@ router.post('/', authMiddleware, async (req, res) => {
       breakdown: {
         cookingTime: maxDishPrepTime,
         queueDelay: queueDelayMinutes,
-        ordersAheadInQueue: ordersInQueue
+        activeOrdersCount: activeOrdersInQueue.length
       }
     });
 
