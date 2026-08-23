@@ -1,0 +1,65 @@
+<!-- MODALE INFORMATIVA -->
+<div class="modal fade" id="modalInfo" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-0 border-dark">
+      <div class="modal-header border-bottom">
+        <h6 class="modal-title fw-bold text-uppercase" id="txt-m-info-title">Informazioni Servizio</h6>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small text-muted" id="txt-m-info-body">
+        Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE NOTE LEGALI -->
+<div class="modal fade" id="modalLegal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-0 border-dark">
+      <div class="modal-header border-bottom">
+        <h6 class="modal-title fw-bold text-uppercase" id="txt-m-legal-title">Termini & Note Legali</h6>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small text-muted" id="txt-m-legal-body">
+        Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POP-UP MODALE: SCEGLI IL RISTORANTE (USATA NEL CATALOGO) -->
+<div class="modal fade" id="modalChooseRestaurant" tabindex="-1" aria-labelledby="modalChooseRestaurantLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+    <div class="modal-content rounded-0 border border-dark">
+      <div class="modal-header border-bottom py-3">
+        <div>
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-1" style="font-size: 0.65rem;">ASPORTO AL BANCONE</span>
+          <h5 class="modal-title fw-bold text-uppercase m-0" id="modalChooseRestaurantLabel" style="font-family: 'Space Grotesk', sans-serif;">
+            SCEGLI IL LOCALE DI RITIRO
+          </h5>
+        </div>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="d-flex gap-3 align-items-center border border-dark p-2 bg-light mb-3">
+          <img id="modal-meal-thumb" src="" alt="Piatto" style="width: 55px; height: 55px; object-fit: cover; border: 1px solid #ddd;">
+          <div>
+            <div class="fw-bold text-uppercase small" id="modal-picker-meal-name" style="font-family: 'Space Grotesk', sans-serif;">NOME PIATTO</div>
+            <div class="font-monospace fw-bold" id="modal-picker-meal-price">€ 0.00</div>
+          </div>
+        </div>
+        <p class="small text-muted mb-3" id="txt-choose-rest-sub">
+          Seleziona il locale più comodo per ritirare il piatto. Se nessuno è nelle vicinanze, puoi annullare.
+        </p>
+        <div id="modal-restaurant-list" class="d-flex flex-column gap-2"></div>
+      </div>
+      <div class="modal-footer border-top p-2 bg-light d-flex justify-content-between">
+        <span class="small text-muted" style="font-size: 0.75rem;">Nessun obbligo d'acquisto</span>
+        <button type="button" class="btn btn-outline-dark btn-sm rounded-0 fw-bold text-uppercase px-3" data-bs-dismiss="modal">
+          ANNULLA / CHIUDI ×
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

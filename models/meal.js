@@ -14,7 +14,8 @@ const mealSchema = new mongoose.Schema({
     measures: [{ type: String }], // Dosi associate agli ingredienti
     
     // Campi personalizzabili per il progetto FastFood
-    price: { type: Number, default: 10 }, // Prezzo base di vendita (se omesso vale 10)
+    price: { type: Number, default: 8.50 }, // Prezzo base di vendita (se omesso vale 10)
+    preparationTime: { type: Number, default: 15 }, // Tempo di preparazione in minuti (se omesso vale 15)
     restaurantId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User', 

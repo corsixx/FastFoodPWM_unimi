@@ -1,441 +1,273 @@
 // public/js/meal.js
 
 let currentMeal = null;
-let quantity = 1;
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let currentLang = localStorage.getItem('appLang') || 'IT';
+let selectedRestaurantId = null;
+let selectedRestaurantName = '';
+let selectedQty = 1;
 
-const i18n = {
-  IT: {
-    btn: 'IT 🇮🇹',
-    announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
-    backCatalog: 'Torna al Menu Completo',
-    loading: 'CARICAMENTO DETTAGLI PIATTO...',
-    notFound: 'PIATTO NON TROVATO O ID MANCANTE NELL\'URL.',
-    prepTime: 'Tempo di preparazione:',
-    ingredientsTitle: 'Ingredienti & Dosi',
-    instructionsTitle: 'Istruzioni & Preparazione',
-    noIngredients: 'Nessuna lista ingredienti dettagliata disponibile.',
-    noInstructions: 'Nessuna istruzione di preparazione disponibile.',
-    restaurantTitle: 'PREPARATO DA // RISTORANTE PARTNER',
-    noRestTitle: 'STATO DISPONIBILITÀ // FUORI MENU',
-    noRestNotice: 'Questo piatto fa parte dell\'archivio ricette ma al momento nessun ristorante partner lo ha inserito nel proprio menu d\'asporto.',
-    restaurantPickup: 'Indirizzo per il ritiro:',
-    viewRestMenu: 'VEDI TUTTI I PIATTI DI QUESTO LOCALE →',
-    qtyLabel: 'Quantità',
-    btnAddCart: 'AGGIUNGI ALL\'ORDINE',
-    btnUnavailable: 'ATTUALMENTE NON ORDINABILE',
-    addedSuccess: 'PIATTO AGGIUNTO AL CARRELLO!',
-    dCatalog: 'CATALOGO COMPLETO',
-    dRestaurants: 'I NOSTRI RISTORANTI',
-    dOrders: 'I MIEI ORDINI',
-    dStats: 'STATISTICHE LOCALE',
-    login: 'ACCEDI',
-    register: 'REGISTRATI',
-    logout: 'LOGOUT',
-    loggedAs: 'ACCESSO EFFETTUATO COME:',
-    fService: 'SERVIZIO',
-    fHow: 'Come Ordinare',
-    fPickup: 'Ritiro al Bancone',
-    fWait: 'Tempi di Attesa',
-    fPartner: 'PARTNER',
-    fJoin: 'Diventa un Ristorante Partner',
-    fManage: 'Accedi al Gestionale',
-    fSupport: 'SUPPORTO',
-    fContact: 'Contatta Assistenza',
-    fChat: 'Chat 24/7 Attiva',
-    mInfoTitle: 'Informazioni Servizio',
-    mInfoBody: 'Scegli i piatti dal menu, inoltra l\'ordine e ritira direttamente al punto cassa senza code.',
-    mLegalTitle: 'Termini & Note Legali',
-    mLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
-  },
-  EN: {
-    btn: 'EN 🇬🇧',
-    announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
-    backCatalog: 'Back to Full Menu',
-    loading: 'LOADING MEAL DETAILS...',
-    notFound: 'MEAL NOT FOUND OR MISSING ID IN URL.',
-    prepTime: 'Preparation time:',
-    ingredientsTitle: 'Ingredients & Measures',
-    instructionsTitle: 'Instructions & Cooking',
-    noIngredients: 'No detailed ingredients available.',
-    noInstructions: 'No preparation steps available.',
-    restaurantTitle: 'PREPARED BY // PARTNER RESTAURANT',
-    noRestTitle: 'AVAILABILITY // OFF MENU',
-    noRestNotice: 'This dish is part of the recipe catalog, but currently no partner restaurant is serving it for takeout.',
-    restaurantPickup: 'Pickup address:',
-    viewRestMenu: 'VIEW ALL DISHES FROM THIS RESTAURANT →',
-    qtyLabel: 'Quantity',
-    btnAddCart: 'ADD TO ORDER',
-    btnUnavailable: 'CURRENTLY NOT ORDERABLE',
-    addedSuccess: 'ADDED TO CART!',
-    dCatalog: 'FULL CATALOG',
-    dRestaurants: 'OUR RESTAURANTS',
-    dOrders: 'MY ORDERS',
-    dStats: 'RESTAURANT STATS',
-    login: 'LOGIN',
-    register: 'REGISTER',
-    logout: 'LOGOUT',
-    loggedAs: 'LOGGED IN AS:',
-    fService: 'SERVICE',
-    fHow: 'How to Order',
-    fPickup: 'Counter Pickup',
-    fWait: 'Wait Times',
-    fPartner: 'PARTNER',
-    fJoin: 'Become a Partner Restaurant',
-    fManage: 'Access Dashboard',
-    fSupport: 'SUPPORT',
-    fContact: 'Contact Support',
-    fChat: '24/7 Chat Active',
-    mInfoTitle: 'Service Information',
-    mInfoBody: 'Choose dishes from the menu, place your order and pick up at the checkout counter.',
-    mLegalTitle: 'Terms & Legal Notes',
-    mLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in database.'
-  }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-  renderLanguageUI();
-  renderCartBadge();
-  loadMealFromUrl();
-  renderDrawerAuth();
+// Avvio dopo che utils.js ha iniettato componenti e traduzioni
+document.addEventListener('componentsLoaded', async () => {
+  await loadMealDetails();
 });
 
-function toggleLanguage() {
-  currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
-  localStorage.setItem('appLang', currentLang);
-  renderLanguageUI();
-  renderDrawerAuth();
-  if (currentMeal) renderMealDetail(currentMeal);
-}
+// Chiamato da toggleLanguage() in utils.js
+window.updateView = function() {
+  const backText = document.getElementById('txt-back-catalog');
+  if (backText) {
+    backText.textContent = currentLang === 'IT' ? 'Torna al Menu Completo' : 'Back to Full Menu';
+  }
+  if (currentMeal) renderMealView();
+};
 
-function renderLanguageUI() {
-  const t = i18n[currentLang];
-  const setT = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  };
-
-  setT('lang-btn', t.btn);
-  setT('txt-announcement', t.announcement);
-  setT('txt-back-catalog', t.backCatalog);
-
-  setT('txt-f-service', t.fService);
-  setT('txt-f-how', t.fHow);
-  setT('txt-f-pickup', t.fPickup);
-  setT('txt-f-wait', t.fWait);
-  setT('txt-f-partner', t.fPartner);
-  setT('txt-f-join', t.fJoin);
-  setT('txt-f-manage', t.fManage);
-  setT('txt-f-support', t.fSupport);
-  setT('txt-f-contact', t.fContact);
-  setT('txt-f-chat', t.fChat);
-  setT('txt-m-info-title', t.mInfoTitle);
-  setT('txt-m-info-body', t.mInfoBody);
-  setT('txt-m-legal-title', t.mLegalTitle);
-  setT('txt-m-legal-body', t.mLegalBody);
-
-  setT('txt-d-catalog', t.dCatalog);
-  setT('txt-d-restaurants', t.dRestaurants);
-  setT('txt-d-orders', t.dOrders);
-  setT('txt-d-stats', t.dStats);
-}
-
-async function loadMealFromUrl() {
-  const container = document.getElementById('meal-detail-container');
-  if (!container) return;
-
-  const t = i18n[currentLang];
+/**
+ * Caricamento dati piatto dal backend
+ */
+async function loadMealDetails() {
   const urlParams = new URLSearchParams(window.location.search);
   const mealId = urlParams.get('id');
+  const queryRestId = urlParams.get('restaurantId');
 
-  if (!mealId || mealId === 'undefined' || mealId === 'null') {
-    container.innerHTML = `<div class="col-12 text-center py-5 text-muted">${t.notFound}</div>`;
+  if (!mealId) {
+    renderNotFound();
     return;
   }
 
   try {
-    const response = await apiRequest(`/meals/${encodeURIComponent(mealId)}`);
-    const mealData = response && response.meal ? response.meal : response;
+    const data = await apiRequest(`/meals/${mealId}`);
+    if (!data) throw new Error('Piatto non trovato');
 
-    if (!mealData || mealData.message || (!mealData.strMeal && !mealData._id)) {
-      container.innerHTML = `<div class="col-12 text-center py-5 text-muted">${t.notFound}</div>`;
-      return;
-    }
+    currentMeal = data;
+    if (queryRestId) selectedRestaurantId = queryRestId;
 
-    currentMeal = mealData;
-    renderMealDetail(mealData);
+    renderMealView();
   } catch (err) {
-    console.error('Errore fetch piatto:', err);
-    container.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore nel recupero del piatto.</div>`;
+    console.error('Errore caricamento scheda piatto:', err);
+    renderNotFound();
   }
 }
 
 /**
- * Estrae gli ingredienti formattati da qualsiasi struttura dati
+ * Renderizza la scheda piatto
  */
-function extractIngredientsList(meal) {
-  const items = [];
-
-  // Caso 1: array strutturato ingredients e measures
-  if (Array.isArray(meal.ingredients) && meal.ingredients.length > 0) {
-    meal.ingredients.forEach((ing, idx) => {
-      if (ing && ing.trim() !== '') {
-        const measure = (meal.measures && meal.measures[idx]) ? meal.measures[idx].trim() : '';
-        items.push(measure ? `${ing.trim()} (${measure})` : ing.trim());
-      }
-    });
-  }
-
-  // Caso 2: campi stile TheMealDB (strIngredient1..20 e strMeasure1..20)
-  if (items.length === 0) {
-    for (let i = 1; i <= 20; i++) {
-      const ing = meal[`strIngredient${i}`];
-      const measure = meal[`strMeasure${i}`];
-      if (ing && ing.trim() !== '') {
-        const mText = measure && measure.trim() !== '' ? ` (${measure.trim()})` : '';
-        items.push(`${ing.trim()}${mText}`);
-      }
-    }
-  }
-
-  return items;
-}
-
-function renderMealDetail(meal) {
+function renderMealView() {
   const container = document.getElementById('meal-detail-container');
-  if (!container) return;
+  if (!container || !currentMeal) return;
 
-  const t = i18n[currentLang];
-  const img = meal.strMealThumb || 'https://via.placeholder.com/600x600?text=FastFood';
-  const name = meal.strMeal || 'Piatto';
-  const category = meal.strCategory || 'MENU';
-  const price = typeof meal.price === 'number' ? meal.price.toFixed(2) : '0.00';
-  const prepTime = meal.preparationTime || 10;
-  const instructions = meal.strInstructions || t.noInstructions;
+  const isIt = currentLang === 'IT';
+  const thumb = currentMeal.strMealThumb || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80';
+  const priceNum = (typeof currentMeal.price === 'number' && currentMeal.price > 0) ? currentMeal.price : (parseFloat(currentMeal.price) || 8.50);
+  const priceStr = priceNum.toFixed(2);
+  const cat = currentMeal.strCategory || 'PIATTO';
+  const prepTime = currentMeal.preparationTime || 15;
+  const desc = currentMeal.description || currentMeal.strInstructions || (isIt ? 'Piatto preparato fresco con ingredienti selezionati.' : 'Freshly prepared dish with selected ingredients.');
 
-  const ingredients = extractIngredientsList(meal);
-  const hasRestaurant = meal.restaurant && meal.restaurant._id;
-  const rest = meal.restaurant || null;
+  let ingrText = isIt ? 'Ingredienti freschi di stagione.' : 'Fresh seasonal ingredients.';
+  if (Array.isArray(currentMeal.ingredients) && currentMeal.ingredients.length > 0) {
+    ingrText = currentMeal.ingredients.join(', ');
+  } else if (typeof currentMeal.ingredients === 'string' && currentMeal.ingredients.trim()) {
+    ingrText = currentMeal.ingredients;
+  }
 
-  // Render lista ingredienti
-  const ingredientsHtml = ingredients.length > 0
-    ? `<div class="d-flex flex-wrap gap-2 mb-3">
-        ${ingredients.map(ing => `
-          <span class="badge bg-light text-dark border rounded-0 px-2 py-1 small" style="font-weight: 500;">
-            • ${ing}
-          </span>
-        `).join('')}
-      </div>`
-    : `<p class="small text-muted mb-3">${t.noIngredients}</p>`;
+  // Lista ristoranti associati
+  const available = Array.isArray(currentMeal.availableRestaurants) ? currentMeal.availableRestaurants : [];
+  let restaurantBox = '';
+  const canOrder = available.length > 0;
+
+  if (canOrder) {
+    if (!selectedRestaurantId) {
+      selectedRestaurantId = available[0]._id;
+      selectedRestaurantName = available[0].name || available[0].restaurantName || 'Ristorante Partner';
+    }
+
+    if (available.length === 1) {
+      restaurantBox = `
+        <div class="border border-dark p-3 bg-white mb-4">
+          <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">
+            ${isIt ? 'PUNTO DI RITIRO' : 'PICKUP LOCATION'}
+          </div>
+          <div class="fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif;">
+            <i class="bi bi-shop me-1"></i> ${available[0].name || available[0].restaurantName}
+          </div>
+          <div class="small text-muted mt-1">
+            <i class="bi bi-geo-alt me-1"></i> ${available[0].address || available[0].restaurantAddress || 'Ritiro presso il locale'}
+          </div>
+        </div>
+      `;
+    } else {
+      restaurantBox = `
+        <div class="border border-dark p-3 bg-white mb-4">
+          <label class="form-label small text-muted text-uppercase fw-bold mb-2" style="font-size: 0.7rem;">
+            <i class="bi bi-shop me-1"></i> ${isIt ? 'SCEGLI IL PUNTO DI RITIRO' : 'CHOOSE PICKUP LOCATION'}
+          </label>
+          <select class="form-select rounded-0 border-dark shadow-none" id="select-pickup-restaurant" onchange="handleSelectRestaurant(event)">
+            ${available.map(r => `
+              <option value="${r._id}" data-name="${(r.name || r.restaurantName).replace(/'/g, "\\'")}" ${String(r._id) === String(selectedRestaurantId) ? 'selected' : ''}>
+                ${(r.name || r.restaurantName).toUpperCase()} &bull; ${r.address || r.restaurantAddress || 'Sede'}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+      `;
+    }
+  } else {
+    restaurantBox = `
+      <div class="border border-dark p-3 bg-light mb-4">
+        <div class="fw-bold text-uppercase text-danger mb-1" style="font-family: 'Space Grotesk', sans-serif;">
+          <i class="bi bi-exclamation-circle me-1"></i> ${isIt ? 'NON DISPONIBILE AL MOMENTO' : 'CURRENTLY UNAVAILABLE'}
+        </div>
+        <div class="small text-muted">
+          ${isIt ? 'Nessun ristorante partner ha attualmente questo piatto a listino.' : 'No partner restaurant currently offers this dish on their menu.'}
+        </div>
+      </div>
+    `;
+  }
+
+  // Barra di acquisto
+  let actionBox = '';
+  if (canOrder) {
+    actionBox = `
+      <div class="border-top pt-4 mt-auto d-flex gap-2 align-items-stretch" style="height: 75px;">
+        <div class="d-flex align-items-center border border-dark bg-white">
+          <button type="button" class="btn btn-light rounded-0 px-3 h-100 fw-bold border-0" onclick="changeQty(-1)">-</button>
+          <span class="px-3 fw-bold font-monospace fs-5" id="meal-qty-display">${selectedQty}</span>
+          <button type="button" class="btn btn-light rounded-0 px-3 h-100 fw-bold border-0" onclick="changeQty(1)">+</button>
+        </div>
+
+        <button type="button" class="btn btn-dark rounded-0 flex-grow-1 fw-bold text-uppercase d-flex justify-content-between align-items-center px-3 px-md-4" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" onclick="addToCart()">
+          <span><i class="bi bi-box-seam me-2"></i> <span>${isIt ? 'AGGIUNGI AL CARRELLO' : 'ADD TO CART'}</span></span>
+          <span class="font-monospace fs-5">€ ${(priceNum * selectedQty).toFixed(2)}</span>
+        </button>
+      </div>
+    `;
+  }
 
   container.innerHTML = `
-    <!-- IMMAGINE & BOX RISTORANTE -->
-    <div class="col-12 col-md-6 col-lg-7">
-      <div class="border" style="background-color: var(--ff-gray-bg); overflow: hidden;">
-        <img src="${img}" alt="${name}" style="width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;">
-      </div>
-
-      <!-- BOX STATO RISTORANTE -->
-      <div class="border border-dark mt-4 p-4 ${hasRestaurant ? 'bg-light' : 'bg-white'}">
-        <div class="small fw-bold text-uppercase text-muted mb-1" style="letter-spacing: 0.05em;">
-          ${hasRestaurant ? t.restaurantTitle : t.noRestTitle}
-        </div>
-        
-        ${hasRestaurant ? `
-          <h5 class="fw-bold text-uppercase mb-2" style="font-family: 'Space Grotesk', sans-serif;">
-            ${rest.name}
-          </h5>
-          <div class="small text-muted mb-2">
-            <i class="bi bi-geo-alt me-1 text-dark"></i> ${t.restaurantPickup} <strong>${rest.address}</strong>
-            ${rest.phone ? `<span class="ms-3"><i class="bi bi-telephone me-1 text-dark"></i> ${rest.phone}</span>` : ''}
-          </div>
-          <a href="catalog.html?restaurant=${encodeURIComponent(rest._id)}" class="small fw-bold text-dark text-decoration-underline text-uppercase d-inline-block mt-2">
-            ${t.viewRestMenu}
-          </a>
-        ` : `
-          <p class="small text-muted m-0">
-            <i class="bi bi-info-circle me-1 text-dark"></i> ${t.noRestNotice}
-          </p>
-        `}
+    <!-- COLONNA SINISTRA: FOTO -->
+    <div class="col-12 col-md-5 col-lg-5">
+      <div class="border border-dark position-relative bg-white">
+        <img src="${thumb}" alt="${currentMeal.strMeal}" class="w-100" style="aspect-ratio: 4/3; object-fit: cover;">
+        <span class="badge bg-black text-white position-absolute top-0 start-0 m-3 rounded-0 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+          ${cat}
+        </span>
       </div>
     </div>
 
-    <!-- SCHEDA INFORMAZIONI, INGREDIENTI E ACQUISTO -->
-    <div class="col-12 col-md-6 col-lg-5 d-flex flex-column justify-content-between">
-      <div>
-        <div class="d-flex align-items-center gap-2 mb-2">
-          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;">
-            ${category}
-          </span>
-          ${hasRestaurant ? `
-            <span class="badge bg-success rounded-0 text-uppercase py-1 px-2">DISPONIBILE</span>
-          ` : `
-            <span class="badge bg-secondary rounded-0 text-uppercase py-1 px-2">FUORI MENU</span>
-          `}
-        </div>
+    <!-- COLONNA DESTRA: DETTAGLI E ACQUISTO -->
+    <div class="col-12 col-md-7 col-lg-7">
+      <div class="border border-dark p-4 p-md-5 bg-white h-100 d-flex flex-column justify-content-between">
         
-        <h2 class="fw-bold text-uppercase mb-2" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;">
-          ${name}
-        </h2>
-        
-        <div class="fs-4 fw-bold mb-3">€ ${price}</div>
-
-        <div class="small text-muted mb-4 pb-3 border-bottom">
-          <i class="bi bi-clock me-1"></i> ${t.prepTime} <strong>${prepTime} min</strong>
-        </div>
-
-        <!-- SEZIONE INGREDIENTI -->
-        <div class="mb-4">
-          <h6 class="fw-bold text-uppercase small mb-2" style="font-family: 'Space Grotesk', sans-serif;">
-            <i class="bi bi-egg-fried me-1"></i> ${t.ingredientsTitle}
-          </h6>
-          ${ingredientsHtml}
-        </div>
-
-        <!-- SEZIONE PREPARAZIONE -->
-        <div class="mb-4">
-          <h6 class="fw-bold text-uppercase small mb-2" style="font-family: 'Space Grotesk', sans-serif;">
-            <i class="bi bi-journal-text me-1"></i> ${t.instructionsTitle}
-          </h6>
-          <p class="small text-muted" style="line-height: 1.6; white-space: pre-line; max-height: 180px; overflow-y: auto;">
-            ${instructions}
-          </p>
-        </div>
-      </div>
-
-      <!-- SELETTORE QUANTITÀ & TASTO AGGIUNGI (DISABILITATO SE SENZA RISTORANTE) -->
-      <div class="border-top pt-4 mt-auto">
-        ${hasRestaurant ? `
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <span class="small fw-bold text-uppercase">${t.qtyLabel}:</span>
-            <div class="d-flex align-items-center border border-dark">
-              <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(-1)">-</button>
-              <span class="px-3 fw-bold small" id="qty-val">${quantity}</span>
-              <button type="button" class="btn btn-sm border-0 rounded-0 px-3 fw-bold" onclick="changeQuantity(1)">+</button>
+        <div>
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <h2 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;">
+              ${currentMeal.strMeal}
+            </h2>
+            <div class="fs-3 fw-bold font-monospace text-dark text-nowrap">
+              € ${priceStr}
             </div>
           </div>
 
-          <button type="button" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" onclick="addCurrentMealToCart()">
-            <i class="bi bi-bag-plus me-2"></i> ${t.btnAddCart} &bull; € <span id="total-price-btn">${((meal.price || 0) * quantity).toFixed(2)}</span>
-          </button>
-        ` : `
-          <button type="button" class="btn btn-secondary rounded-0 w-100 py-3 fw-bold text-uppercase" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em; cursor: not-allowed;" disabled>
-            <i class="bi bi-slash-circle me-2"></i> ${t.btnUnavailable}
-          </button>
-        `}
-      </div>
+          <div class="d-flex align-items-center gap-2 mb-4">
+            <span class="badge border border-dark text-dark rounded-0 px-2 py-1 small">
+              <i class="bi bi-clock me-1"></i> ${isIt ? 'Tempo di preparazione:' : 'Preparation time:'} <strong>${prepTime} min</strong>
+            </span>
+          </div>
 
+          ${restaurantBox}
+
+          <div class="mb-4">
+            <div class="small text-muted text-uppercase fw-bold border-bottom pb-1 mb-2" style="font-size: 0.75rem;">
+              ${isIt ? 'Descrizione & Note' : 'Description & Notes'}
+            </div>
+            <p class="small text-muted mb-3" style="line-height: 1.6;">
+              ${desc}
+            </p>
+
+            <div class="small text-muted text-uppercase fw-bold border-bottom pb-1 mb-2" style="font-size: 0.75rem;">
+              ${isIt ? 'Ingredienti' : 'Ingredients'}
+            </div>
+            <p class="small text-dark fw-semibold mb-0">
+              ${ingrText}
+            </p>
+          </div>
+        </div>
+
+        ${actionBox}
+
+      </div>
     </div>
   `;
 }
 
-function changeQuantity(delta) {
-  quantity += delta;
-  if (quantity < 1) quantity = 1;
+window.handleSelectRestaurant = function(e) {
+  selectedRestaurantId = e.target.value;
+  const opt = e.target.options[e.target.selectedIndex];
+  selectedRestaurantName = opt.getAttribute('data-name') || 'Ristorante Partner';
+};
 
-  const qtyEl = document.getElementById('qty-val');
-  if (qtyEl) qtyEl.textContent = quantity;
+window.changeQty = function(delta) {
+  selectedQty += delta;
+  if (selectedQty < 1) selectedQty = 1;
+  renderMealView();
+};
 
-  const totalBtn = document.getElementById('total-price-btn');
-  if (totalBtn && currentMeal) {
-    totalBtn.textContent = ((currentMeal.price || 0) * quantity).toFixed(2);
+window.addToCart = function() {
+  if (!currentMeal) return;
+  const isIt = currentLang === 'IT';
+
+  if (!selectedRestaurantId) {
+    alert(isIt ? 'Seleziona un ristorante per il ritiro prima di continuare.' : 'Please select a pickup restaurant before proceeding.');
+    return;
   }
-}
 
-function addCurrentMealToCart() {
-  if (!currentMeal || !currentMeal.restaurant || !currentMeal.restaurant._id) return;
+  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const mealId = String(currentMeal._id || currentMeal.idMeal || currentMeal.id);
+  const priceNum = (typeof currentMeal.price === 'number' && currentMeal.price > 0) ? currentMeal.price : (parseFloat(currentMeal.price) || 8.50);
 
-  const restId = currentMeal.restaurant._id;
-  const restName = currentMeal.restaurant.name;
+  const existing = cart.find(i => String(i.id) === mealId && String(i.restaurantId) === String(selectedRestaurantId));
 
-  const item = cart.find(i => i.mealId === (currentMeal._id || currentMeal.idMeal));
-  if (item) {
-    item.quantity += quantity;
+  if (existing) {
+    existing.quantity += selectedQty;
   } else {
     cart.push({
-      mealId: currentMeal._id || currentMeal.idMeal,
-      name: currentMeal.strMeal || 'Piatto',
-      price: currentMeal.price || 0,
-      quantity: quantity,
-      restaurantId: restId,
-      restaurantName: restName
+      id: mealId,
+      name: currentMeal.strMeal,
+      price: priceNum,
+      thumb: currentMeal.strMealThumb || '',
+      preparationTime: currentMeal.preparationTime || 15,
+      restaurantId: selectedRestaurantId,
+      restaurantName: selectedRestaurantName,
+      quantity: selectedQty
     });
   }
 
   localStorage.setItem('cart', JSON.stringify(cart));
-  renderCartBadge();
+  
+  // Aggiorna il carrello globale definito in utils.js
+  if (typeof renderCartBadge === 'function') renderCartBadge();
+  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
 
-  const badge = document.getElementById('cart-badge');
-  if (badge) {
-    badge.classList.add('bg-warning', 'text-dark');
-    setTimeout(() => badge.classList.remove('bg-warning', 'text-dark'), 300);
+  // Apre il carrello laterale
+  const cartDrawerEl = document.getElementById('cartOffcanvas');
+  if (cartDrawerEl) {
+    bootstrap.Offcanvas.getOrCreateInstance(cartDrawerEl).show();
   }
+};
 
-  const t = i18n[currentLang];
-  const btn = document.querySelector('button[onclick="addCurrentMealToCart()"]');
-  if (btn) {
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `<i class="bi bi-check2 me-2"></i> ${t.addedSuccess}`;
-    btn.classList.replace('btn-dark', 'btn-success');
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.classList.replace('btn-success', 'btn-dark');
-    }, 1200);
-  }
-}
+function renderNotFound() {
+  const container = document.getElementById('meal-detail-container');
+  if (!container) return;
 
-function renderCartBadge() {
-  const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
-  const badge = document.getElementById('cart-badge');
-  if (badge) badge.textContent = count;
-}
-
-function renderDrawerAuth() {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('userRole');
-  const name = localStorage.getItem('userName') || 'Utente';
-  const drawerSec = document.getElementById('drawer-user-section');
-
-  if (!drawerSec) return;
-
-  const currentLang = localStorage.getItem('appLang') || 'IT';
   const isIt = currentLang === 'IT';
-
-  // Se è un ristorante, rendiamo visibile il link alle statistiche/gestionale
-  const statsLink = document.getElementById('drawer-stats-link');
-  if (statsLink && role === 'restaurant') {
-    statsLink.classList.remove('d-none');
-  }
-
-  if (token) {
-    drawerSec.innerHTML = `
-      <div class="small text-muted mb-1 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accesso effettuato come:' : 'Logged in as:'}
+  container.innerHTML = `
+    <div class="col-12 text-center py-5">
+      <div class="border border-dark p-5 bg-white d-inline-block text-center" style="max-width: 500px;">
+        <i class="bi bi-exclamation-octagon fs-1 mb-3 d-block"></i>
+        <h4 class="fw-bold text-uppercase mb-2">${isIt ? 'PIATTO NON TROVATO' : 'MEAL NOT FOUND'}</h4>
+        <p class="small text-muted mb-4">${isIt ? 'Il piatto richiesto non esiste o è stato rimosso.' : 'The requested meal does not exist or has been removed.'}</p>
+        <a href="catalog.html" class="btn btn-dark rounded-0 px-4 py-2 fw-bold text-uppercase">
+          ${isIt ? 'TORNA AL CATALOGO' : 'BACK TO CATALOG'}
+        </a>
       </div>
-      <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
-        ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
-      </div>
-
-      <!-- Tasto Vai al Profilo -->
-      <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
-        <i class="bi bi-arrow-right"></i>
-      </a>
-
-      <!-- Tasto Logout -->
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
-        ${isIt ? 'Logout' : 'Logout'}
-      </button>
-    `;
-  } else {
-    drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accedi' : 'Login'}
-      </a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Registrati' : 'Register'}
-      </a>
-    `;
-  }
+    </div>
+  `;
 }

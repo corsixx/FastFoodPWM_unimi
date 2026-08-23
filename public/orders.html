@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood // Gestione Ordini & Checkout</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+
+    <!-- Header Iniettato da utils.js -->
+    <div id="app-header"></div>
+
+    <!-- CONTENUTO PRINCIPALE -->
+    <main class="container-fluid px-3 px-md-4 py-5" style="max-width: 1200px; min-height: 75vh;">
+
+      <!-- Intestazione Pagina e Navigazione a Tab -->
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom pb-3 mb-4">
+        <div>
+          <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-1" id="orders-view-badge">AREA RISERVATA</span>
+          <h2 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;" id="orders-view-title">
+            GESTIONE ORDINI
+          </h2>
+        </div>
+
+        <!-- Selettore Viste (Tab) -->
+        <div class="btn-group rounded-0" role="group" id="orders-tab-group">
+          <button type="button" class="btn btn-outline-dark rounded-0 fw-bold text-uppercase px-3 py-2" id="tab-btn-checkout" onclick="switchOrdersTab('checkout')">
+            <i class="bi bi-bag-check me-1"></i> <span id="txt-tab-checkout">Cassa & Checkout</span>
+          </button>
+          <button type="button" class="btn btn-dark rounded-0 fw-bold text-uppercase px-3 py-2" id="tab-btn-history" onclick="switchOrdersTab('history')">
+            <i class="bi bi-clock-history me-1"></i> <span id="txt-tab-history">Storico Ordini</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- VISTA 1: CHECKOUT / CONFERMA ORDINE -->
+      <section id="view-checkout" class="d-none">
+        <div class="row g-4">
+          
+          <!-- Colonna Sinistra: Elenco Piatti nel Carrello -->
+          <div class="col-12 col-lg-7">
+            <div class="border border-dark p-4 bg-white">
+              <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <h6 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;" id="txt-co-items-title">
+                  RIEPILOGO PIATTI NEL CARRELLO
+                </h6>
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-0 fw-bold text-uppercase py-0 px-2" onclick="clearCartAndRefresh()">
+                  <i class="bi bi-trash me-1"></i>Svuota
+                </button>
+              </div>
+
+              <!-- Lista Piatti -->
+              <div id="checkout-items-list" class="d-flex flex-column gap-3"></div>
+            </div>
+          </div>
+
+          <!-- Colonna Destra: Totale, Dati Ritiro & Invio -->
+          <div class="col-12 col-lg-5">
+            <div class="border border-dark p-4 bg-white">
+              <h6 class="fw-bold text-uppercase border-bottom pb-2 mb-3" style="font-family: 'Space Grotesk', sans-serif;" id="txt-co-summary-title">
+                DETTAGLI RITIRO & PAGAMENTO
+              </h6>
+
+              <!-- Info Ristorante di Ritiro -->
+              <div class="p-3 bg-light border mb-3">
+                <div class="small text-muted text-uppercase fw-bold mb-1" id="txt-co-rest-label">Locale di Ritiro Asporto:</div>
+                <div class="fw-bold text-uppercase" id="checkout-restaurant-name">---</div>
+              </div>
+
+              <!-- Note Aggiuntive -->
+              <div class="mb-3">
+                <label for="order-notes" class="form-label small text-muted text-uppercase fw-bold" id="txt-co-notes-label">
+                  Note per la cucina (allergie o preferenze):
+                </label>
+                <textarea id="order-notes" class="form-control rounded-0 border-dark shadow-none" rows="2" placeholder="Es. Senza cipolla, ritiro alle 13:30"></textarea>
+              </div>
+
+              <!-- Conteggio Totale -->
+              <div class="border-top pt-3 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted small text-uppercase">Articoli totali:</span>
+                  <span class="fw-bold font-monospace" id="checkout-total-items">0</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted small text-uppercase">Tempo stimato preparazione:</span>
+                  <span class="fw-bold font-monospace" id="checkout-total-time">0 min</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center fs-5 border-top pt-2 mt-2">
+                  <span class="fw-bold text-uppercase">Totale da Pagare:</span>
+                  <span class="fw-bold font-monospace fs-4 text-dark" id="checkout-final-price">€ 0.00</span>
+                </div>
+              </div>
+
+              <!-- Pulsante Invio Ordine -->
+              <button type="button" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase d-flex justify-content-between align-items-center px-4" id="btn-submit-order" onclick="submitOrder()">
+                <span id="txt-co-submit-btn">INVIA ORDINE AL BANCONE</span>
+                <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- VISTA 2: STORICO ORDINI (CLIENTE / RISTORATORE) -->
+      <section id="view-history" class="d-none">
+        
+        <!-- Feedback Nessun Ordine -->
+        <div id="no-orders-msg" class="text-center py-5 border border-dark bg-white d-none">
+          <i class="bi bi-clock-history fs-1 mb-2 d-block"></i>
+          <h5 class="fw-bold text-uppercase" id="txt-no-orders-title">NESSUN ORDINE TROVATO</h5>
+          <p class="small text-muted mb-3" id="txt-no-orders-sub">Non hai ancora effettuato nessun ordine con questo account.</p>
+          <a href="catalog.html" class="btn btn-dark rounded-0 px-4 py-2 fw-bold text-uppercase" id="txt-no-orders-btn">Vai al Catalogo</a>
+        </div>
+
+        <!-- Tabella / Lista Ordini Dinamica -->
+        <div id="orders-history-container" class="d-flex flex-column gap-3"></div>
+
+      </section>
+
+    </main>
+
+    <!-- Componenti Comuni Iniettati da utils.js -->
+    <div id="app-footer"></div>
+    <div id="app-drawer"></div>
+    <div id="app-modals"></div>
+
+    <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/orders.js"></script>
+  </body>
+</html>

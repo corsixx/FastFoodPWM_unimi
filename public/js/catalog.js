@@ -8,168 +8,48 @@ let currentSearch = '';
 let currentSort = 'default';
 let currentRestaurantFilter = '';
 let rawMealsList = [];
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let currentLang = localStorage.getItem('appLang') || 'IT';
+let selectedMealForCart = null;
 
-const i18n = {
-  IT: {
-    btn: 'IT 🇮🇹',
-    announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
-    catalogTitle: 'MENU COMPLETO',
-    searchPlaceholder: 'Cerca piatto o ingrediente...',
-    sortDefault: 'Ordina: Predefinito',
-    sortPriceAsc: 'Prezzo: Crescente',
-    sortPriceDesc: 'Prezzo: Decrescente',
-    sortTime: 'Tempo preparazione',
-    sortName: 'Nome (A - Z)',
-    allCat: 'ALL / TUTTO',
-    prep: 'prep',
-    foundItems: 'piatti trovati',
-    noItems: 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.',
-    loading: 'CARICAMENTO CATALOGO IN CORSO...',
-    pageLabel: 'PAG.',
-    btnView: 'VEDI',
-    btnViewRecipe: 'VEDI SCHEDA',
-    btnCart: '+ CARRELLO',
-    restFilterLabel: 'Menu del locale:',
-    btnResetFilter: 'Mostra Tutto il Menu ×',
-    dCatalog: 'CATALOGO COMPLETO',
-    dRestaurants: 'I NOSTRI RISTORANTI',
-    dOrders: 'I MIEI ORDINI',
-    dStats: 'STATISTICHE LOCALE',
-    login: 'ACCEDI',
-    register: 'REGISTRATI',
-    logout: 'LOGOUT',
-    loggedAs: 'ACCESSO EFFETTUATO COME:',
-    fService: 'SERVIZIO',
-    fHow: 'Come Ordinare',
-    fPickup: 'Ritiro al Bancone',
-    fWait: 'Tempi di Attesa',
-    fPartner: 'PARTNER',
-    fJoin: 'Diventa un Ristorante Partner',
-    fManage: 'Accedi al Gestionale',
-    fSupport: 'SUPPORTO',
-    fContact: 'Contatta Assistenza',
-    fChat: 'Chat 24/7 Attiva',
-    mInfoTitle: 'Informazioni Servizio',
-    mInfoBody: 'Scegli i piatti dal menu, inoltra l\'ordine e ritira direttamente al punto cassa senza code.',
-    mLegalTitle: 'Termini & Note Legali',
-    mLegalBody: 'Piattaforma protetta con autenticazione JWT. Tutti i dati degli utenti e gli ordini sono gestiti in modo sicuro su database.'
-  },
-  EN: {
-    btn: 'EN 🇬🇧',
-    announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
-    catalogTitle: 'FULL MENU CATALOG',
-    searchPlaceholder: 'Search dish or ingredient...',
-    sortDefault: 'Sort: Default',
-    sortPriceAsc: 'Price: Low to High',
-    sortPriceDesc: 'Price: High to Low',
-    sortTime: 'Preparation time',
-    sortName: 'Name (A - Z)',
-    allCat: 'ALL',
-    prep: 'prep',
-    foundItems: 'dishes found',
-    noItems: 'NO DISHES FOUND MATCHING YOUR FILTERS.',
-    loading: 'LOADING CATALOG ITEMS...',
-    pageLabel: 'PAGE',
-    btnView: 'VIEW',
-    btnViewRecipe: 'VIEW RECIPE',
-    btnCart: '+ ADD',
-    restFilterLabel: 'Menu of partner:',
-    btnResetFilter: 'Show Full Menu ×',
-    dCatalog: 'FULL CATALOG',
-    dRestaurants: 'OUR RESTAURANTS',
-    dOrders: 'MY ORDERS',
-    dStats: 'RESTAURANT STATS',
-    login: 'LOGIN',
-    register: 'REGISTER',
-    logout: 'LOGOUT',
-    loggedAs: 'LOGGED IN AS:',
-    fService: 'SERVICE',
-    fHow: 'How to Order',
-    fPickup: 'Counter Pickup',
-    fWait: 'Wait Times',
-    fPartner: 'PARTNER',
-    fJoin: 'Become a Partner Restaurant',
-    fManage: 'Access Dashboard',
-    fSupport: 'SUPPORT',
-    fContact: 'Contact Support',
-    fChat: '24/7 Chat Active',
-    mInfoTitle: 'Service Information',
-    mInfoBody: 'Choose dishes from the menu, place your order and pick up at the checkout counter.',
-    mLegalTitle: 'Terms & Legal Notes',
-    mLegalBody: 'Secure platform protected by JWT authentication. User data and orders are stored securely in database.'
-  }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
+// Avvio coordinato dopo l'iniezione dei componenti da utils.js
+document.addEventListener('componentsLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const restParam = urlParams.get('restaurant');
+  const restParam = urlParams.get('restaurant') || urlParams.get('restaurantId');
   if (restParam) {
     currentRestaurantFilter = restParam;
   }
 
-  renderLanguageUI();
-  renderCartBadge();
-  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
-  loadBackendCategories();
-  loadFullCatalog();
-  renderDrawerAuth();
-  setupBarMovement();
+  await loadBackendCategories();
+  await loadFullCatalog();
+  if (typeof setupBarMovement === 'function') setupBarMovement();
 });
 
-function toggleLanguage() {
-  currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
-  localStorage.setItem('appLang', currentLang);
-  renderLanguageUI();
-  renderDrawerAuth();
-  updateView();
-  loadBackendCategories();
-}
+// Chiamato da toggleLanguage() in utils.js
+window.updateView = function() {
+  updateLanguageLabels();
+  renderCatalogView();
+};
 
-function renderLanguageUI() {
-  const t = i18n[currentLang];
+function updateLanguageLabels() {
+  const isIt = currentLang === 'IT';
   const setT = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   };
 
-  setT('lang-btn', t.btn);
-  setT('txt-announcement', t.announcement);
-  setT('txt-catalog-title', t.catalogTitle);
-  setT('btn-cat-all', t.allCat);
+  setT('txt-catalog-title', isIt ? 'MENU COMPLETO' : 'FULL MENU CATALOG');
+  setT('btn-cat-all', isIt ? 'ALL / TUTTO' : 'ALL / FULL');
+  setT('opt-sort-default', isIt ? 'Ordina: Predefinito' : 'Sort: Default');
+  setT('opt-sort-price-asc', isIt ? 'Prezzo: Crescente' : 'Price: Low to High');
+  setT('opt-sort-price-desc', isIt ? 'Prezzo: Decrescente' : 'Price: High to Low');
+  setT('opt-sort-time', isIt ? 'Tempo preparazione' : 'Preparation time');
+  setT('opt-sort-name', isIt ? 'Nome (A - Z)' : 'Name (A - Z)');
+  setT('txt-rest-filter-label', isIt ? 'Menu del locale:' : 'Menu of partner:');
+  setT('btn-reset-rest-filter', isIt ? 'Mostra Tutto il Menu ×' : 'Show Full Menu ×');
 
   const searchInput = document.getElementById('search-input');
-  if (searchInput) searchInput.placeholder = t.searchPlaceholder;
-
-  setT('opt-sort-default', t.sortDefault);
-  setT('opt-sort-price-asc', t.sortPriceAsc);
-  setT('opt-sort-price-desc', t.sortPriceDesc);
-  setT('opt-sort-time', t.sortTime);
-  setT('opt-sort-name', t.sortName);
-
-  setT('txt-rest-filter-label', t.restFilterLabel);
-  setT('btn-reset-rest-filter', t.btnResetFilter);
-
-  setT('txt-f-service', t.fService);
-  setT('txt-f-how', t.fHow);
-  setT('txt-f-pickup', t.fPickup);
-  setT('txt-f-wait', t.fWait);
-  setT('txt-f-partner', t.fPartner);
-  setT('txt-f-join', t.fJoin);
-  setT('txt-f-manage', t.fManage);
-  setT('txt-f-support', t.fSupport);
-  setT('txt-f-contact', t.fContact);
-  setT('txt-f-chat', t.fChat);
-  setT('txt-m-info-title', t.mInfoTitle);
-  setT('txt-m-info-body', t.mInfoBody);
-  setT('txt-m-legal-title', t.mLegalTitle);
-  setT('txt-m-legal-body', t.mLegalBody);
-
-  setT('txt-d-catalog', t.dCatalog);
-  setT('txt-d-restaurants', t.dRestaurants);
-  setT('txt-d-orders', t.dOrders);
-  setT('txt-d-stats', t.dStats);
+  if (searchInput) {
+    searchInput.placeholder = isIt ? 'Cerca piatto o ingrediente...' : 'Search dish or ingredient...';
+  }
 }
 
 async function loadBackendCategories() {
@@ -178,11 +58,11 @@ async function loadBackendCategories() {
 
   try {
     const categories = await apiRequest('/meals/categories');
-    const allLabel = i18n[currentLang].allCat;
+    const allLabel = currentLang === 'IT' ? 'ALL / TUTTO' : 'ALL / FULL';
 
-    if (categories && Array.isArray(categories) && categories.length > 0) {
+    if (Array.isArray(categories) && categories.length > 0) {
       const buttons = categories.map(cat => `
-        <button class="nav-category-link ${currentCategory === cat ? 'active' : ''}" 
+        <button class="nav-category-link ${currentCategory.toLowerCase() === cat.toLowerCase() ? 'active' : ''}" 
                 onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
           ${cat.toUpperCase()}
         </button>
@@ -195,38 +75,37 @@ async function loadBackendCategories() {
       `;
     }
   } catch (err) {
-    console.error("Errore caricamento categorie:", err);
+    console.error('Errore caricamento categorie:', err);
   }
 }
 
 async function loadFullCatalog() {
-  const grid = document.getElementById('catalog-grid') || document.getElementById('meals-grid');
+  const grid = document.getElementById('catalog-grid');
   if (!grid) return;
-
-  const t = i18n[currentLang];
-  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm me-2"></div>${t.loading}</div>`;
 
   try {
     const res = await apiRequest('/meals');
-    
-    // Gestione formato dati (array diretto o oggetto contenente { meals: [...] })
-    if (Array.isArray(res)) {
-      rawMealsList = res;
-    } else if (res && Array.isArray(res.meals)) {
-      rawMealsList = res.meals;
-    } else {
-      rawMealsList = [];
-    }
+    const rawData = Array.isArray(res) ? res : (res.meals || []);
+
+    // De-duplicazione per ID
+    const uniqueMap = new Map();
+    rawData.forEach(m => {
+      const key = String(m._id || m.id);
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, m);
+      }
+    });
+
+    rawMealsList = Array.from(uniqueMap.values());
 
     if (currentRestaurantFilter) {
       const banner = document.getElementById('restaurant-filter-banner');
-      const bannerName = document.getElementById('filtered-restaurant-name');
       if (banner) banner.classList.remove('d-none');
-      if (bannerName) bannerName.textContent = 'Partner';
     }
 
     currentPage = 1;
-    updateView();
+    updateLanguageLabels();
+    renderCatalogView();
   } catch (err) {
     console.error('Errore chiamata catalogo:', err);
     grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento piatti dal database.</div>`;
@@ -238,9 +117,9 @@ function getFilteredAndSortedMeals() {
 
   if (currentRestaurantFilter) {
     list = list.filter(m => 
-      m.restaurantId === currentRestaurantFilter || 
-      m.restaurant === currentRestaurantFilter ||
-      (m.availableRestaurants && m.availableRestaurants.some(r => (r._id || r) === currentRestaurantFilter))
+      String(m.restaurantId) === String(currentRestaurantFilter) || 
+      String(m.restaurant) === String(currentRestaurantFilter) ||
+      (Array.isArray(m.availableRestaurants) && m.availableRestaurants.some(r => String(r._id || r) === String(currentRestaurantFilter)))
     );
   }
 
@@ -252,16 +131,17 @@ function getFilteredAndSortedMeals() {
     const term = currentSearch.toLowerCase();
     list = list.filter(m => 
       (m.strMeal && m.strMeal.toLowerCase().includes(term)) ||
-      (m.strInstructions && m.strInstructions.toLowerCase().includes(term))
+      (m.strInstructions && m.strInstructions.toLowerCase().includes(term)) ||
+      (Array.isArray(m.ingredients) && m.ingredients.some(i => i.toLowerCase().includes(term)))
     );
   }
 
   if (currentSort === 'price-asc') {
-    list.sort((a, b) => (a.price || 0) - (b.price || 0));
+    list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
   } else if (currentSort === 'price-desc') {
-    list.sort((a, b) => (b.price || 0) - (a.price || 0));
+    list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
   } else if (currentSort === 'time-asc') {
-    list.sort((a, b) => (a.preparationTime || 0) - (b.preparationTime || 0));
+    list.sort((a, b) => (Number(a.preparationTime) || 0) - (Number(b.preparationTime) || 0));
   } else if (currentSort === 'name-asc') {
     list.sort((a, b) => (a.strMeal || '').localeCompare(b.strMeal || ''));
   }
@@ -269,7 +149,7 @@ function getFilteredAndSortedMeals() {
   return list;
 }
 
-function updateView() {
+function renderCatalogView() {
   const allFiltered = getFilteredAndSortedMeals();
   const totalItems = allFiltered.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
@@ -277,10 +157,10 @@ function updateView() {
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
-  const countLabel = document.getElementById('results-count') || document.getElementById('catalog-count-label');
-  const t = i18n[currentLang];
+  const countLabel = document.getElementById('results-count');
+  const isIt = currentLang === 'IT';
   if (countLabel) {
-    countLabel.textContent = `${totalItems} ${t.foundItems}`;
+    countLabel.textContent = `${totalItems} ${isIt ? 'piatti trovati' : 'dishes found'}`;
   }
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -291,63 +171,62 @@ function updateView() {
 }
 
 function renderMealsGrid(meals) {
-  const grid = document.getElementById('catalog-grid') || document.getElementById('meals-grid');
+  const grid = document.getElementById('catalog-grid');
   if (!grid) return;
 
-  const t = i18n[currentLang];
+  const isIt = currentLang === 'IT';
 
   if (meals.length === 0) {
-    grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.noItems}</div>`;
+    const noMsg = isIt ? 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.' : 'NO DISHES FOUND MATCHING YOUR FILTERS.';
+    grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${noMsg}</div>`;
     return;
   }
 
   grid.innerHTML = meals.map(m => {
-    const hasRest = m.restaurantId || m.restaurant || (Array.isArray(m.availableRestaurants) && m.availableRestaurants.length > 0);
-    const cleanName = (m.strMeal || 'Piatto').replace(/'/g, "\\'");
-    const thumbUrl = m.strMealThumb || 'https://via.placeholder.com/400x500?text=FastFood';
+    const hasRest = Array.isArray(m.availableRestaurants) && m.availableRestaurants.length > 0;
+    const thumbUrl = m.strMealThumb || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
+    const price = (Number(m.price) || 8.50).toFixed(2);
+    const prepTime = m.preparationTime || 15;
 
     return `
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card">
-          
           <div class="product-img-wrapper" onclick="goToMealPage('${m._id}')">
             <img src="${thumbUrl}" alt="${m.strMeal || ''}" loading="lazy">
             <span class="product-tag">${m.strCategory || 'MENU'}</span>
           </div>
 
           <div class="product-info-body">
-            <div class="product-title">${m.strMeal || 'Piatto'}</div>
+            <div class="product-title text-truncate" title="${m.strMeal}">${m.strMeal || 'Piatto'}</div>
             <div class="product-price">
-              € ${(m.price || 0).toFixed(2)} 
-              <span class="small text-muted fw-normal">&bull; ${m.preparationTime || 10}m ${t.prep}</span>
+              € ${price} 
+              <span class="small text-muted fw-normal">&bull; ${prepTime}m prep</span>
             </div>
           </div>
 
-          <!-- BOTTONI AZIONE -->
           <div class="card-action-group">
             ${hasRest ? `
               <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
-                <i class="bi bi-eye"></i> ${t.btnView}
+                <i class="bi bi-eye"></i> ${isIt ? 'VEDI' : 'VIEW'}
               </button>
-              <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}', '${cleanName}', ${m.price || 0}, '${thumbUrl}')">
-                <i class="bi bi-bag-plus"></i> ${t.btnCart}
+              <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}')">
+                <i class="bi bi-bag-plus"></i> ${isIt ? '+ CARRELLO' : '+ ADD'}
               </button>
             ` : `
-              <button type="button" class="btn-card-action btn-card-view w-100" onclick="goToMealPage('${m._id}')">
-                <i class="bi bi-journal-bookmark"></i> ${t.btnViewRecipe}
+              <button type="button" class="btn-card-action btn-card-view w-100" style="border-right: none;" onclick="goToMealPage('${m._id}')">
+                <i class="bi bi-journal-bookmark"></i> ${isIt ? 'VEDI SCHEDA' : 'VIEW RECIPE'}
               </button>
             `}
           </div>
-
         </div>
       </div>
     `;
   }).join('');
 }
 
-function goToMealPage(mealId) {
+window.goToMealPage = function(mealId) {
   window.location.href = `meal.html?id=${encodeURIComponent(mealId)}`;
-}
+};
 
 function renderMinimalPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
@@ -360,7 +239,8 @@ function renderMinimalPagination(totalPages) {
   }
 
   wrapper.classList.remove('d-none');
-  const t = i18n[currentLang];
+  const isIt = currentLang === 'IT';
+  const label = isIt ? 'PAG.' : 'PAGE';
   
   const currentFormatted = String(currentPage).padStart(2, '0');
   const totalFormatted = String(totalPages).padStart(2, '0');
@@ -369,129 +249,126 @@ function renderMinimalPagination(totalPages) {
     <button class="page-arrow-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
       <i class="bi bi-chevron-left"></i>
     </button>
-    <div class="page-counter-text">${t.pageLabel} ${currentFormatted} / ${totalFormatted}</div>
+    <div class="page-counter-text">${label} ${currentFormatted} / ${totalFormatted}</div>
     <button class="page-arrow-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
       <i class="bi bi-chevron-right"></i>
     </button>
   `;
 }
 
-function goToPage(page) {
+window.goToPage = function(page) {
   currentPage = page;
-  updateView();
+  renderCatalogView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+};
 
-function filterCategory(categoryName, btnElement) {
+window.filterCategory = function(categoryName, btnElement) {
   currentCategory = categoryName;
   currentPage = 1;
-  document.querySelectorAll('.nav-category-link').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#categories-nav .nav-category-link').forEach(el => el.classList.remove('active'));
   if (btnElement) btnElement.classList.add('active');
-  updateView();
-}
+  renderCatalogView();
+};
 
-function handleSearch(val) {
-  currentSearch = val.trim();
+window.handleSearchInput = function(e) {
+  currentSearch = e.target.value.trim();
   currentPage = 1;
-  updateView();
-}
+  renderCatalogView();
+};
 
-function handleSort(val) {
+window.handleSort = function(val) {
   currentSort = val;
-  updateView();
-}
+  renderCatalogView();
+};
 
-function resetRestaurantFilter() {
+window.resetRestaurantFilter = function() {
   currentRestaurantFilter = '';
   const banner = document.getElementById('restaurant-filter-banner');
   if (banner) banner.classList.add('d-none');
   window.history.replaceState({}, document.title, 'catalog.html');
   currentPage = 1;
-  updateView();
-}
+  renderCatalogView();
+};
 
-function renderCartBadge() {
-  cart = JSON.parse(localStorage.getItem('cart')) || [];
-  const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
-  const badge = document.getElementById('cart-badge');
-  if (badge) badge.textContent = count;
-}
+window.promptRestaurantSelection = function(mealId) {
+  const meal = rawMealsList.find(m => String(m._id) === String(mealId));
+  if (!meal) return;
 
-function setupBarMovement() {
-  const slider = document.querySelector('.categories-bar-wrapper');
-  if (!slider) return;
+  selectedMealForCart = meal;
+  const price = (Number(meal.price) || 8.50).toFixed(2);
 
-  slider.addEventListener('wheel', (e) => {
-    if (e.deltaY !== 0) {
-      e.preventDefault();
-      slider.scrollLeft += e.deltaY;
+  const thumbEl = document.getElementById('modal-meal-thumb');
+  const nameEl = document.getElementById('modal-picker-meal-name');
+  const priceEl = document.getElementById('modal-picker-meal-price');
+  const listEl = document.getElementById('modal-restaurant-list');
+
+  if (thumbEl) thumbEl.src = meal.strMealThumb || '';
+  if (nameEl) nameEl.textContent = meal.strMeal;
+  if (priceEl) priceEl.textContent = `€ ${price}`;
+
+  const available = Array.isArray(meal.availableRestaurants) ? meal.availableRestaurants : [];
+
+  if (listEl) {
+    if (available.length === 0) {
+      const msg = currentLang === 'IT' ? 'Nessun ristorante partner ha attualmente questo piatto in menu.' : 'No partner restaurant currently offers this dish.';
+      listEl.innerHTML = `<div class="text-muted small p-2">${msg}</div>`;
+    } else {
+      listEl.innerHTML = available.map(r => `
+        <button type="button" class="btn btn-outline-dark rounded-0 text-start p-2 d-flex justify-content-between align-items-center mb-2 w-100" onclick="confirmAddToCartWithRestaurant('${r._id}', '${(r.name || 'Ristorante').replace(/'/g, "\\'")}')">
+          <div>
+            <div class="fw-bold text-uppercase small">${r.name || 'Ristorante Partner'}</div>
+            <div class="text-muted" style="font-size: 0.75rem;"><i class="bi bi-geo-alt me-1"></i>${r.address || 'Ritiro al bancone'}</div>
+          </div>
+          <span class="badge bg-black rounded-0 font-monospace">RITIRA QUI →</span>
+        </button>
+      `).join('');
     }
-  }, { passive: false });
-
-  let isDown = false;
-  let startX;
-  let scrollLeft;
-
-  slider.addEventListener('mousedown', (e) => {
-    isDown = true;
-    startX = e.pageX - slider.offsetLeft;
-    scrollLeft = slider.scrollLeft;
-  });
-
-  slider.addEventListener('mouseleave', () => { isDown = false; });
-  slider.addEventListener('mouseup', () => { isDown = false; });
-
-  slider.addEventListener('mousemove', (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - slider.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    slider.scrollLeft = scrollLeft - walk;
-  });
-}
-
-function renderDrawerAuth() {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('userRole');
-  const name = localStorage.getItem('userName') || 'Utente';
-  const drawerSec = document.getElementById('drawer-user-section');
-
-  if (!drawerSec) return;
-
-  const currentLang = localStorage.getItem('appLang') || 'IT';
-  const isIt = currentLang === 'IT';
-
-  const statsLink = document.getElementById('drawer-stats-link');
-  if (statsLink && role === 'restaurant') {
-    statsLink.classList.remove('d-none');
   }
 
-  if (token) {
-    drawerSec.innerHTML = `
-      <div class="small text-muted mb-1 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accesso effettuato come:' : 'Logged in as:'}
-      </div>
-      <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
-        ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
-      </div>
+  const modalEl = document.getElementById('modalChooseRestaurant');
+  if (modalEl) {
+    const modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInst.show();
+  }
+};
 
-      <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
-        <i class="bi bi-arrow-right"></i>
-      </a>
+window.confirmAddToCartWithRestaurant = function(restId, restName) {
+  if (!selectedMealForCart) return;
 
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
-        ${isIt ? 'Logout' : 'Logout'}
-      </button>
-    `;
+  const priceNum = Number(selectedMealForCart.price) || 8.50;
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const mId = String(selectedMealForCart._id);
+
+  const existing = cart.find(i => String(i.id) === mId && String(i.restaurantId) === String(restId));
+
+  if (existing) {
+    existing.quantity += 1;
   } else {
-    drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accedi' : 'Login'}
-      </a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Registrati' : 'Register'}
-      </a>
-    `;
+    cart.push({
+      id: mId,
+      name: selectedMealForCart.strMeal,
+      price: priceNum,
+      thumb: selectedMealForCart.strMealThumb || '',
+      preparationTime: selectedMealForCart.preparationTime || 15,
+      restaurantId: restId,
+      restaurantName: restName,
+      quantity: 1
+    });
   }
-}
+
+  localStorage.setItem('cart', JSON.stringify(cart));
+  
+  if (typeof renderCartBadge === 'function') renderCartBadge();
+  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
+
+  const modalEl = document.getElementById('modalChooseRestaurant');
+  if (modalEl) {
+    const modalInst = bootstrap.Modal.getInstance(modalEl);
+    if (modalInst) modalInst.hide();
+  }
+
+  const cartDrawerEl = document.getElementById('cartOffcanvas');
+  if (cartDrawerEl) {
+    bootstrap.Offcanvas.getOrCreateInstance(cartDrawerEl).show();
+  }
+};

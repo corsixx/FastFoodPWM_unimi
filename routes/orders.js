@@ -93,29 +93,36 @@ router.post('/', authMiddleware, async (req, res) => {
     for (const item of items) {
       // Interroga MongoDB per recuperare il piatto reale
       const mealDoc = await Meal.findById(item.mealId);
-      if (!mealDoc) {
-        return res.status(404).json({ message: `Piatto non trovato (ID: ${item.mealId})` });
+      
+      // Risoluzione sicura del prezzo al centesimo (evita fallback errati a 20€)
+      let unitPrice = 8.50;
+      if (mealDoc && mealDoc.price !== undefined && mealDoc.price !== null && !isNaN(mealDoc.price)) {
+        unitPrice = Number(mealDoc.price);
+      } else if (mealDoc && mealDoc.strPrice !== undefined && mealDoc.strPrice !== null && !isNaN(mealDoc.strPrice)) {
+        unitPrice = Number(mealDoc.strPrice);
+      } else if (item.price !== undefined && item.price !== null && !isNaN(item.price)) {
+        unitPrice = Number(item.price);
       }
 
       const qty = Number(item.quantity) || 1;
-      calculatedTotal += mealDoc.price * qty;
+      calculatedTotal += unitPrice * qty;
 
       // Legge il tempo di preparazione del piatto o usa 10 minuti di fallback
-      const dishPrepTime = mealDoc.preparationTime || 10;
+      const dishPrepTime = (mealDoc && mealDoc.preparationTime) ? Number(mealDoc.preparationTime) : 10;
       if (dishPrepTime > maxDishPrepTime) {
         maxDishPrepTime = dishPrepTime;
       }
 
       // Snapshot del piatto nello scontrino
       orderItems.push({
-        meal: mealDoc._id,
-        name: mealDoc.strMeal,
+        meal: mealDoc ? mealDoc._id : item.mealId,
+        name: mealDoc ? mealDoc.strMeal : (item.name || 'Piatto'),
         quantity: qty,
-        price: mealDoc.price
+        price: unitPrice
       });
     }
 
-    // 5. Calcolo ritardo dovuto alla coda di ordini non ancora completati
+    // 5. Calcolo ritardo dovuto alla coda di ordini non ancora completati (ordinati o in preparazione)
     const ordersInQueue = await Order.countDocuments({
       restaurant: restaurantId,
       status: { $in: ['ordinato', 'in preparazione'] }
@@ -347,7 +354,6 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
     ]);
 
     // 3. Classifica e Benchmark rispetto a tutti gli altri ristoranti
-    // Calcola il volume di vendite e fatturato di ogni ristorante registrato
     const leaderboard = await Order.aggregate([
       { $match: { status: 'consegnato' } },
       {
@@ -357,7 +363,6 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
           totalOrdersCompleted: { $sum: 1 }
         }
       },
-      // Popola i dati del ristorante (nome del locale)
       {
         $lookup: {
           from: 'utente',
@@ -373,10 +378,10 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
           restaurantName: '$restaurantDetails.restaurantName',
           totalRevenue: 1,
           totalOrdersCompleted: 1,
-          isMyRestaurant: { $eq: ['$_id', currentRestaurantId] } // Flag per evidenziare il proprio ristorante
+          isMyRestaurant: { $eq: ['$_id', currentRestaurantId] }
         }
       },
-      { $sort: { totalRevenue: -1 } } // Ordina dal locale con più fatturato a quello con meno
+      { $sort: { totalRevenue: -1 } }
     ]);
 
     // 4. Posizione del proprio locale in classifica

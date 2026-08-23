@@ -1,0 +1,49 @@
+<!-- POP-UP LATERALE: SIDE-CART (CARRELLO) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel" style="width: 380px; border-left: 2px solid #000;">
+  <div class="offcanvas-header border-bottom py-3">
+    <div>
+      <span class="badge bg-black rounded-0 text-uppercase py-1 px-2 mb-1" style="font-size: 0.65rem;">IL TUO ORDINE</span>
+      <h5 class="offcanvas-title fw-bold text-uppercase m-0" id="cartOffcanvasLabel" style="font-family: 'Space Grotesk', sans-serif;">
+        CARRELLO (<span id="drawer-cart-total-qty">0</span>)
+      </h5>
+    </div>
+    <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body d-flex flex-column justify-content-between p-0">
+    <div id="drawer-cart-items-container" class="p-3 d-flex flex-column gap-2 overflow-y-auto" style="max-height: calc(100vh - 210px);"></div>
+
+    <div class="border-top p-3 bg-light">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small text-muted text-uppercase fw-bold">Totale Ordine:</span>
+        <span class="fs-5 fw-bold font-monospace" id="drawer-cart-subtotal">€ 0.00</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-danger rounded-0 btn-sm py-2 px-3 fw-bold text-uppercase" onclick="clearCart()" title="Svuota Carrello">
+          <i class="bi bi-trash"></i>
+        </button>
+        <a href="orders.html" class="btn btn-dark rounded-0 w-100 py-3 fw-bold text-uppercase text-center d-flex justify-content-between align-items-center px-3" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.05em;" id="btn-checkout" onclick="handleOrdersNav(event)">
+          <span>VAI AL CHECKOUT</span>
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU OFFCANVAS LATERALE (NAVIGAZIONE & ACCOUNT) -->
+<div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
+  <div class="offcanvas-header justify-content-end pb-0">
+    <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
+  </div>
+  
+  <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
+    <div>
+      <a href="catalog.html" class="drawer-nav-item"><span id="txt-d-catalog">CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
+      <a href="restaurantCatalog.html" class="drawer-nav-item"><span id="txt-d-restaurants">I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
+      <a href="orders.html" class="drawer-nav-item" onclick="handleOrdersNav(event)"><span id="txt-d-orders">I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
+      <a href="stats.html" class="drawer-nav-item d-none" id="drawer-stats-link"><span id="txt-d-stats">STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
+    </div>
+    <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
+  </div>
+</div>
