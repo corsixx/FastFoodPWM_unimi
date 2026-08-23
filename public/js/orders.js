@@ -1,9 +1,7 @@
-// public/js/orders.js
-
-let activeTab = 'history'; // 'checkout' | 'history'
+let activeTab = 'history';
 let ordersList = [];
+let userProfile = null;
 
-// Avvio coordinato all'iniezione dei componenti di utils.js
 document.addEventListener('componentsLoaded', async () => {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
@@ -27,6 +25,9 @@ document.addEventListener('componentsLoaded', async () => {
     document.getElementById('view-checkout')?.classList.add('d-none');
     document.getElementById('view-history')?.classList.remove('d-none');
   } else {
+    // Carica il profilo utente per ottenere il metodo di pagamento predefinito
+    await fetchUserProfile();
+
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     if (cart.length > 0) {
       activeTab = 'checkout';
@@ -38,6 +39,22 @@ document.addEventListener('componentsLoaded', async () => {
 
   await loadOrdersHistory();
 });
+
+async function fetchUserProfile() {
+  try {
+    const res = await apiRequest('/users/me');
+    if (res && res.user) {
+      userProfile = res.user;
+    } else if (res) {
+      userProfile = res;
+    }
+  } catch (err) {
+    console.warn('Profilo non caricato da API, fallback su localStorage:', err);
+    userProfile = {
+      preferredPaymentMethod: localStorage.getItem('userPaymentMethod') || 'carta_credito'
+    };
+  }
+}
 
 window.updateView = function() {
   renderCheckoutView();
@@ -79,6 +96,7 @@ function renderCheckoutView() {
   const totalTimeEl = document.getElementById('checkout-total-time');
   const finalPriceEl = document.getElementById('checkout-final-price');
   const submitBtn = document.getElementById('btn-submit-order');
+  const paymentSelect = document.getElementById('order-payment-method');
   const isIt = currentLang === 'IT';
 
   if (!listContainer) return;
@@ -104,6 +122,17 @@ function renderCheckoutView() {
   }
 
   if (submitBtn) submitBtn.disabled = false;
+
+  // Imposta il metodo di pagamento predefinito dal profilo utente
+  if (paymentSelect && !paymentSelect.dataset.userModified) {
+    const defaultMethod = userProfile?.preferredPaymentMethod || userProfile?.paymentMethod || 'carta_credito';
+    paymentSelect.value = defaultMethod;
+    
+    // Evita di resettarlo se l'utente lo modifica manualmente durante la sessione
+    paymentSelect.addEventListener('change', () => {
+      paymentSelect.dataset.userModified = 'true';
+    }, { once: true });
+  }
 
   const totalItems = cart.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
   const totalPrice = cart.reduce((sum, i) => sum + ((Number(i.price) || 0) * (Number(i.quantity) || 1)), 0);
@@ -155,7 +184,6 @@ window.submitOrder = async function() {
     return;
   }
 
-  // CONTROLLO DI SICUREZZA: Verifica che tutti i piatti appartengano allo stesso ristorante
   const firstRestId = cart[0].restaurantId;
   const hasMixedRestaurants = cart.some(item => item.restaurantId && item.restaurantId !== firstRestId);
   
@@ -163,6 +191,9 @@ window.submitOrder = async function() {
     alert(isIt ? 'Il carrello contiene piatti di ristoranti differenti. Svuota il carrello o ordina da un solo locale per volta.' : 'Cart contains items from different restaurants. Please order from a single restaurant at a time.');
     return;
   }
+
+  const paymentSelect = document.getElementById('order-payment-method');
+  const selectedPayment = paymentSelect ? paymentSelect.value : 'carta_credito';
 
   const submitBtn = document.getElementById('btn-submit-order');
   const restId = cart[0].restaurantId;
@@ -173,7 +204,7 @@ window.submitOrder = async function() {
 
   const payload = {
     restaurantId: restId,
-    paymentMethod: 'carta_credito',
+    paymentMethod: selectedPayment,
     items: itemsPayload
   };
 
@@ -243,6 +274,11 @@ function renderHistoryView() {
     const restName = order.restaurant?.restaurantName || order.restaurant?.name || 'Ristorante Partner';
     const customerName = order.customer ? `${order.customer.name || ''} ${order.customer.surname || ''}`.trim() || order.customer.email : 'Cliente';
 
+    // Formattazione label Metodo di Pagamento nello storico
+    let paymentLabel = '💳 Carta di Credito';
+    if (order.paymentMethod === 'carta_prepagata') paymentLabel = '💳 Carta Prepagata';
+    if (order.paymentMethod === 'contanti') paymentLabel = '💵 Contanti al Ritiro';
+
     let badgeClass = 'bg-secondary';
     if (status === 'ordinato') badgeClass = 'bg-warning text-dark';
     if (status === 'in preparazione') badgeClass = 'bg-primary';
@@ -254,7 +290,6 @@ function renderHistoryView() {
     let actionButtons = '';
     
     if (role === 'restaurant') {
-      // GESTIONE COMANDO DA PARTE DEL RISTORATORE (Come da specifiche prof)
       if (status === 'ordinato') {
         actionButtons = `
           <div class="border-top pt-3 mt-3 d-flex justify-content-end align-items-center">
@@ -280,7 +315,6 @@ function renderHistoryView() {
         `;
       }
     } else {
-      // VISTA SOLA LETTURA PER IL CLIENTE
       let statusText = isIt ? 'In attesa di lavorazione' : 'Waiting for processing';
       if (status === 'in preparazione') statusText = isIt ? 'La cucina sta preparando i piatti' : 'Kitchen is preparing dishes';
       if (status === 'in consegna') statusText = isIt ? 'Ordine pronto al bancone per il ritiro!' : 'Order ready at counter for pickup!';
@@ -312,11 +346,15 @@ function renderHistoryView() {
         </div>
 
         <div class="row g-3 mb-3">
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
             <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">${role === 'restaurant' ? 'CLIENTE:' : 'LOCALE DI RITIRO:'}</div>
             <div class="fw-bold text-uppercase">${role === 'restaurant' ? customerName : restName}</div>
           </div>
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-4">
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">METODO DI PAGAMENTO:</div>
+            <div class="fw-bold small text-uppercase">${paymentLabel}</div>
+          </div>
+          <div class="col-12 col-md-4">
             <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">TEMPO STIMATO DI ATTESA:</div>
             <div class="fw-bold font-monospace">${order.estimatedWaitTimeMinutes || 15} min (Coda attiva)</div>
           </div>
