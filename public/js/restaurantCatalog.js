@@ -1,337 +1,242 @@
-// public/js/restaurantCatalog.js
-
-const ITEMS_PER_PAGE = 8;
+let allRestaurants = [];
+let filteredRestaurants = [];
 let currentPage = 1;
+const itemsPerPage = 6; // Mostra 6 card grandi per pagina (3 righe da 2)
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80';
 
-let currentSearch = '';
-let rawRestaurantsList = [];
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let currentLang = localStorage.getItem('appLang') || 'IT';
-
-const i18n = {
-  IT: {
-    btn: 'IT 🇮🇹',
-    announcement: 'Supporto in Chat 24/7 • Ordini al Bancone & Asporto Rapido',
-    restTitle: 'I NOSTRI RISTORANTI PARTNER',
-    searchPlaceholder: 'Cerca ristorante, cucina o indirizzo...',
-    foundItems: 'locali registrati',
-    noItems: 'NESSUN RISTORANTE TROVATO CON I FILTRI SELEZIONATI.',
-    loading: 'CARICAMENTO LOCALI DA MONGODB...',
-    pageLabel: 'PAG.',
-    viewMenuBtn: 'VEDI MENU',
-    dCatalog: 'CATALOGO COMPLETO',
-    dRestaurants: 'I NOSTRI RISTORANTI',
-    dOrders: 'I MIEI ORDINI',
-    dStats: 'STATISTICHE LOCALE',
-    login: 'ACCEDI',
-    register: 'REGISTRATI',
-    logout: 'LOGOUT',
-    loggedAs: 'ACCESSO EFFETTUATO COME:',
-    fService: 'SERVIZIO',
-    fHow: 'Come Ordinare',
-    fPickup: 'Ritiro al Bancone',
-    fPartner: 'PARTNER',
-    fJoin: 'Diventa un Ristorante Partner',
-    fManage: 'Accedi al Gestionale',
-    fSupport: 'SUPPORTO',
-    fContact: 'Contatta Assistenza',
-    mInfoTitle: 'Informazioni Servizio',
-    mInfoBody: 'Scegli il tuo ristorante partner preferito ed esplora il suo menu esclusivo con ritiro senza code.',
-    mLegalTitle: 'Termini & Note Legali',
-    mLegalBody: 'Piattaforma protetta con autenticazione JWT e gestione ordini in tempo reale su database.'
-  },
-  EN: {
-    btn: 'EN 🇬🇧',
-    announcement: '24/7 Live Chat Support • Counter Pickup & Express Takeout',
-    restTitle: 'OUR PARTNER RESTAURANTS',
-    searchPlaceholder: 'Search restaurant, cuisine or address...',
-    foundItems: 'registered restaurants',
-    noItems: 'NO RESTAURANTS FOUND MATCHING YOUR SEARCH.',
-    loading: 'LOADING RESTAURANTS FROM MONGODB...',
-    pageLabel: 'PAGE',
-    viewMenuBtn: 'VIEW MENU',
-    dCatalog: 'FULL CATALOG',
-    dRestaurants: 'OUR RESTAURANTS',
-    dOrders: 'MY ORDERS',
-    dStats: 'RESTAURANT STATS',
-    login: 'LOGIN',
-    register: 'REGISTER',
-    logout: 'LOGOUT',
-    loggedAs: 'LOGGED IN AS:',
-    fService: 'SERVICE',
-    fHow: 'How to Order',
-    fPickup: 'Counter Pickup',
-    fPartner: 'PARTNER',
-    fJoin: 'Become a Partner Restaurant',
-    fManage: 'Access Dashboard',
-    fSupport: 'SUPPORT',
-    fContact: 'Contact Support',
-    mInfoTitle: 'Service Information',
-    mInfoBody: 'Choose your favorite partner restaurant and explore their exclusive menu for express pickup.',
-    mLegalTitle: 'Terms & Legal Notes',
-    mLegalBody: 'Secure platform protected by JWT authentication and real-time database orders.'
-  }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-  renderLanguageUI();
-  renderCartBadge();
-  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
-  loadRestaurants();
-  renderDrawerAuth();
+// Inizializzazione sincronizzata con l'evento di caricamento di utils.js
+document.addEventListener('componentsLoaded', async () => {
+  await loadRestaurantsData();
 });
 
-/**
- * 1. GESTIONE LINGUA
- */
-function toggleLanguage() {
-  currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
-  localStorage.setItem('appLang', currentLang);
-  renderLanguageUI();
-  renderDrawerAuth();
-  updateView();
-}
+// Hook per il cambio lingua richiamato da utils.js
+window.updateView = function() {
+  renderGrid();
+};
 
-function renderLanguageUI() {
-  const t = i18n[currentLang];
-  const setT = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  };
-
-  setT('lang-btn', t.btn);
-  setT('txt-announcement', t.announcement);
-  setT('txt-rest-title', t.restTitle);
-
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) searchInput.placeholder = t.searchPlaceholder;
-
-  setT('txt-f-service', t.fService);
-  setT('txt-f-how', t.fHow);
-  setT('txt-f-pickup', t.fPickup);
-  setT('txt-f-partner', t.fPartner);
-  setT('txt-f-join', t.fJoin);
-  setT('txt-f-manage', t.fManage);
-  setT('txt-f-support', t.fSupport);
-  setT('txt-f-contact', t.fContact);
-  setT('txt-m-info-title', t.mInfoTitle);
-  setT('txt-m-info-body', t.mInfoBody);
-  setT('txt-m-legal-title', t.mLegalTitle);
-  setT('txt-m-legal-body', t.mLegalBody);
-
-  setT('txt-d-catalog', t.dCatalog);
-  setT('txt-d-restaurants', t.dRestaurants);
-  setT('txt-d-orders', t.dOrders);
-  setT('txt-d-stats', t.dStats);
-}
-
-/**
- * 2. CARICA I RISTORANTI DAL BACKEND
- */
-async function loadRestaurants() {
+async function loadRestaurantsData() {
   const grid = document.getElementById('restaurants-grid');
-  if (!grid) return;
-
-  const t = i18n[currentLang];
-  grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small"><div class="spinner-border spinner-border-sm me-2"></div>${t.loading}</div>`;
+  const countEl = document.getElementById('results-count');
+  const isIt = currentLang === 'IT';
 
   try {
-    const data = await apiRequest('/auth/restaurants');
+    grid.innerHTML = `
+      <div class="col-12 text-center py-5">
+        <div class="spinner-border text-dark" role="status"></div>
+        <div class="small text-muted text-uppercase fw-bold mt-2">${isIt ? 'Caricamento ristoranti...' : 'Loading restaurants...'}</div>
+      </div>
+    `;
 
-    if (data && Array.isArray(data)) {
-      rawRestaurantsList = data.map(r => ({
-        _id: r._id,
-        // Dà priorità assoluta al nome del locale
-        restaurantName: r.restaurantName || r.name || 'Ristorante Partner',
-        cuisine: r.cuisineType || r.cuisine || 'PARTNER RESTAURANT',
-        location: r.restaurantAddress || r.location || r.address || 'Ritiro al Bancone',
-        phone: r.restaurantPhone || r.phone || '',
-        img: r.img || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
-      }));
-    } else {
-      rawRestaurantsList = [];
+    // 1. Chiamata alla rotta GET /api/restaurants
+    const restaurantsRes = await apiRequest('/restaurants');
+    const rawRestaurants = Array.isArray(restaurantsRes) ? restaurantsRes : (restaurantsRes.data || []);
+
+    // 2. Chiamata a meals e orders per ricavare foto e piatti venduti
+    const [mealsRes, ordersRes] = await Promise.allSettled([
+      apiRequest('/meals'),
+      apiRequest('/orders')
+    ]);
+
+    const allMeals = mealsRes.status === 'fulfilled' 
+      ? (Array.isArray(mealsRes.value) ? mealsRes.value : (mealsRes.value?.meals || [])) 
+      : [];
+
+    const allOrders = ordersRes.status === 'fulfilled' 
+      ? (Array.isArray(ordersRes.value) ? ordersRes.value : (ordersRes.value?.orders || [])) 
+      : [];
+
+    // Mappa vendite piatti
+    const salesByMeal = {};
+    if (Array.isArray(allOrders)) {
+      allOrders.forEach(ord => {
+        if (Array.isArray(ord.items)) {
+          ord.items.forEach(it => {
+            const mId = it.meal?._id || it.meal || it.mealId;
+            if (mId) {
+              salesByMeal[mId] = (salesByMeal[mId] || 0) + (Number(it.quantity) || 1);
+            }
+          });
+        }
+      });
     }
 
+    // 3. Mappatura dei dati per ciascun ristorante
+    allRestaurants = rawRestaurants.map(rest => {
+      const restId = rest._id || rest.id;
+      const menuIds = Array.isArray(rest.restaurantMenu) ? rest.restaurantMenu.map(id => String(id)) : [];
+      
+      const restMeals = allMeals.filter(m => {
+        const mRestId = m.restaurant?._id || m.restaurant || m.restaurantId;
+        return String(mRestId) === String(restId) || menuIds.includes(String(m._id));
+      });
+
+      let coverImage = null;
+      let topDishName = '';
+
+      if (restMeals.length > 0) {
+        restMeals.sort((a, b) => (salesByMeal[b._id] || 0) - (salesByMeal[a._id] || 0));
+        const topDish = restMeals.find(m => m.strMealThumb || m.image) || restMeals[0];
+        if (topDish) {
+          coverImage = topDish.strMealThumb || topDish.image;
+          topDishName = topDish.strMeal || topDish.name;
+        }
+      }
+
+      return {
+        ...rest,
+        coverImage: coverImage || FALLBACK_IMAGE,
+        topDishName: topDishName,
+        totalDishes: restMeals.length || (rest.restaurantMenu ? rest.restaurantMenu.length : 0)
+      };
+    });
+
+    filteredRestaurants = [...allRestaurants];
     currentPage = 1;
-    updateView();
+    renderGrid();
   } catch (err) {
-    console.error('Errore chiamata ristoranti:', err);
-    grid.innerHTML = `<div class="col-12 text-danger text-center py-5">Errore caricamento dati dal database.</div>`;
+    console.error('Errore durante il caricamento dei ristoranti:', err);
+    grid.innerHTML = `
+      <div class="col-12 text-center py-5 border border-dark bg-white">
+        <i class="bi bi-exclamation-triangle fs-2 text-danger mb-2 d-block"></i>
+        <h6 class="fw-bold text-uppercase">${isIt ? 'Impossibile caricare i ristoranti' : 'Failed to load restaurants'}</h6>
+        <p class="small text-muted mb-3">${err.message}</p>
+        <button class="btn btn-dark btn-sm rounded-0 fw-bold text-uppercase px-3" onclick="loadRestaurantsData()">${isIt ? 'Riprova' : 'Retry'}</button>
+      </div>
+    `;
+    if (countEl) countEl.textContent = '0 locali disponibili';
   }
 }
 
-/**
- * 3. FILTRA RICERCA
- */
-function getFilteredRestaurants() {
-  let list = [...rawRestaurantsList];
+function renderGrid() {
+  const grid = document.getElementById('restaurants-grid');
+  const countEl = document.getElementById('results-count');
+  const isIt = currentLang === 'IT';
 
-  if (currentSearch) {
-    const term = currentSearch.toLowerCase();
-    list = list.filter(r =>
-      (r.restaurantName && r.restaurantName.toLowerCase().includes(term)) ||
-      (r.location && r.location.toLowerCase().includes(term)) ||
-      (r.cuisine && r.cuisine.toLowerCase().includes(term))
-    );
+  if (countEl) {
+    countEl.textContent = `${filteredRestaurants.length} ${isIt ? 'locali disponibili' : 'restaurants available'}`;
   }
 
-  return list;
-}
+  if (filteredRestaurants.length === 0) {
+    grid.innerHTML = `
+      <div class="col-12 text-center py-5 border border-dark bg-white">
+        <i class="bi bi-shop-window fs-1 text-muted mb-2 d-block"></i>
+        <h5 class="fw-bold text-uppercase">${isIt ? 'Nessun ristorante trovato' : 'No restaurants found'}</h5>
+        <p class="small text-muted m-0">${isIt ? 'Nessun locale partner registrato al momento.' : 'No partner restaurants registered yet.'}</p>
+      </div>
+    `;
+    renderPagination(0);
+    return;
+  }
 
-/**
- * 4. AGGIORNA VISTA E PAGINAZIONE
- */
-function updateView() {
-  const filtered = getFilteredRestaurants();
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
-
+  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
-  const countLabel = document.getElementById('results-count');
-  const t = i18n[currentLang];
-  if (countLabel) {
-    countLabel.textContent = `${totalItems} ${t.foundItems}`;
-  }
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const pageItems = filteredRestaurants.slice(startIdx, startIdx + itemsPerPage);
 
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const pageItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Layout a card grandi (2 colonne su desktop)
+  grid.innerHTML = pageItems.map(rest => {
+    const restId = rest._id || rest.id;
+    const name = rest.restaurantName || rest.name || 'Ristorante FastFood';
+    const address = rest.restaurantAddress || rest.address || 'Ritiro al Bancone';
+    const category = rest.favoriteCategory || rest.cuisine || 'Fast Food & Grill';
+    const dishesCount = rest.totalDishes || 0;
+    const topBadge = rest.topDishName 
+      ? `<span class="badge bg-black text-white rounded-0 text-uppercase position-absolute top-0 start-0 m-3 px-3 py-2 shadow-sm" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+           <i class="bi bi-star-fill text-warning me-1"></i> Top: ${rest.topDishName}
+         </span>` 
+      : '';
 
-  renderRestaurantsGrid(pageItems);
-  renderMinimalPagination(totalPages);
-}
-
-/**
- * 5. RENDERING DELLE CARD RISTORANTE
- */
-function renderRestaurantsGrid(restaurants) {
-  const grid = document.getElementById('restaurants-grid');
-  if (!grid) return;
-
-  const t = i18n[currentLang];
-
-  if (restaurants.length === 0) {
-    grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${t.noItems}</div>`;
-    return;
-  }
-
-  grid.innerHTML = restaurants.map(r => `
-    <div class="col-6 col-md-4 col-lg-3">
-      <div class="product-card cursor-pointer" onclick="goToRestaurantMenu('${r._id}')">
-        <div class="product-img-wrapper">
-          <img src="${r.img}" alt="${r.restaurantName}" loading="lazy">
-          <span class="product-tag">${r.cuisine.toUpperCase()}</span>
-        </div>
-        <div class="product-info-body">
-          <div class="product-title">${r.restaurantName}</div>
-          <div class="product-price">
-            ${r.location} &bull; <span class="small fw-bold text-dark text-decoration-underline">${t.viewMenuBtn} &rarr;</span>
+    return `
+      <div class="col-12 col-md-6 col-xl-6">
+        <div class="card h-100 rounded-0 border-dark shadow-sm position-relative bg-white d-flex flex-column overflow-hidden">
+          
+          <!-- Immagine di Copertina Grande da 270px -->
+          <div class="position-relative overflow-hidden border-bottom border-dark" style="height: 270px; background: #f0f0f0;">
+            <img src="${rest.coverImage}" alt="${name}" class="w-100 h-100" 
+                 style="object-fit: cover; transition: transform 0.4s ease;" 
+                 onmouseover="this.style.transform='scale(1.06)'" 
+                 onmouseout="this.style.transform='scale(1)'" 
+                 onerror="this.onerror=null; this.src='${FALLBACK_IMAGE}';">
+            ${topBadge}
+            <span class="badge bg-white text-dark border border-dark rounded-0 font-monospace position-absolute bottom-0 end-0 m-3 px-2 py-1" style="font-size: 0.75rem;">
+              <i class="bi bi-journal-text me-1"></i>${dishesCount} ${isIt ? 'piatti a menù' : 'menu dishes'}
+            </span>
           </div>
+
+          <!-- Informazioni Locale -->
+          <div class="card-body p-4 d-flex flex-column justify-content-between">
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted small text-uppercase font-monospace fw-bold" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                  <i class="bi bi-tag me-1"></i>${category}
+                </span>
+              </div>
+              <h4 class="fw-bold text-uppercase mb-2 text-truncate" style="font-family: 'Space Grotesk', sans-serif;">
+                ${name}
+              </h4>
+              <p class="text-muted small mb-0 text-truncate" style="font-size: 0.88rem;">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i>${address}
+              </p>
+            </div>
+
+            <!-- Tasto Full-Width per il Catalogo Piatti del Locale -->
+            <a href="catalog.html?restaurantId=${restId}" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase py-3 d-flex justify-content-between align-items-center px-4 mt-2">
+              <span style="letter-spacing: 0.05em;">${isIt ? 'ESPLORA IL MENÙ' : 'EXPLORE MENU'}</span>
+              <i class="bi bi-arrow-right fs-5"></i>
+            </a>
+          </div>
+
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  renderPagination(totalPages);
 }
 
-function goToRestaurantMenu(restaurantId) {
-  window.location.href = `restaurantDetail.html?id=${encodeURIComponent(restaurantId)}`;
-}
-
-/**
- * 6. CONTROLLO PAGINAZIONE A FRECCETTE MINIMALE
- */
-function renderMinimalPagination(totalPages) {
+function renderPagination(totalPages) {
   const container = document.getElementById('pagination-controls');
-  const wrapper = document.getElementById('pagination-wrapper');
-  if (!container || !wrapper) return;
+  if (!container) return;
 
   if (totalPages <= 1) {
-    wrapper.classList.add('d-none');
+    container.innerHTML = '';
     return;
   }
 
-  wrapper.classList.remove('d-none');
-  const t = i18n[currentLang];
-
-  const currentFormatted = String(currentPage).padStart(2, '0');
-  const totalFormatted = String(totalPages).padStart(2, '0');
-
   container.innerHTML = `
-    <button class="page-arrow-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 fw-bold px-3 ${currentPage === 1 ? 'disabled' : ''}" onclick="goToPage(${currentPage - 1})">
       <i class="bi bi-chevron-left"></i>
     </button>
-    <div class="page-counter-text">${t.pageLabel} ${currentFormatted} / ${totalFormatted}</div>
-    <button class="page-arrow-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+    
+    <span class="font-monospace small fw-bold px-3 py-1 border border-dark bg-white">
+      ${currentPage} / ${totalPages}
+    </span>
+    
+    <button type="button" class="btn btn-outline-dark btn-sm rounded-0 fw-bold px-3 ${currentPage === totalPages ? 'disabled' : ''}" onclick="goToPage(${currentPage + 1})">
       <i class="bi bi-chevron-right"></i>
     </button>
   `;
 }
 
-function goToPage(page) {
+window.goToPage = function(page) {
+  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
+  if (page < 1 || page > totalPages) return;
   currentPage = page;
-  updateView();
+  renderGrid();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+};
 
-function handleSearch(val) {
-  currentSearch = val.trim();
+window.handleSearch = function(query) {
+  const term = query.trim().toLowerCase();
+  filteredRestaurants = allRestaurants.filter(r => {
+    const name = (r.restaurantName || r.name || '').toLowerCase();
+    const address = (r.restaurantAddress || r.address || '').toLowerCase();
+    const category = (r.favoriteCategory || r.cuisine || '').toLowerCase();
+    const dish = (r.topDishName || '').toLowerCase();
+    return name.includes(term) || address.includes(term) || category.includes(term) || dish.includes(term);
+  });
   currentPage = 1;
-  updateView();
-}
-
-function renderCartBadge() {
-  cart = JSON.parse(localStorage.getItem('cart')) || [];
-  const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
-  const badge = document.getElementById('cart-badge');
-  if (badge) badge.textContent = count;
-}
-
-/**
- * 7. GESTIONE AUTENTICAZIONE NEL DRAWER
- */
-function renderDrawerAuth() {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('userRole');
-  const name = localStorage.getItem('userName') || 'Utente';
-  const drawerSec = document.getElementById('drawer-user-section');
-
-  if (!drawerSec) return;
-
-  const currentLang = localStorage.getItem('appLang') || 'IT';
-  const isIt = currentLang === 'IT';
-
-  const statsLink = document.getElementById('drawer-stats-link');
-  if (statsLink && role === 'restaurant') {
-    statsLink.classList.remove('d-none');
-  }
-
-  if (token) {
-    drawerSec.innerHTML = `
-      <div class="small text-muted mb-1 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accesso effettuato come:' : 'Logged in as:'}
-      </div>
-      <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
-        ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
-      </div>
-
-      <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
-        <i class="bi bi-arrow-right"></i>
-      </a>
-
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
-        ${isIt ? 'Logout' : 'Logout'}
-      </button>
-    `;
-  } else {
-    drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accedi' : 'Login'}
-      </a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Registrati' : 'Register'}
-      </a>
-    `;
-  }
-}
+  renderGrid();
+};
