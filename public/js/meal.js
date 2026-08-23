@@ -54,6 +54,9 @@ function renderMealView() {
   if (!container || !currentMeal) return;
 
   const isIt = currentLang === 'IT';
+  const userRole = localStorage.getItem('userRole');
+  const isRestaurant = userRole === 'restaurant';
+
   const thumb = currentMeal.strMealThumb || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80';
   const priceNum = (typeof currentMeal.price === 'number' && currentMeal.price > 0) ? currentMeal.price : (parseFloat(currentMeal.price) || 8.50);
   const priceStr = priceNum.toFixed(2);
@@ -79,7 +82,24 @@ function renderMealView() {
       selectedRestaurantName = available[0].name || available[0].restaurantName || 'Ristorante Partner';
     }
 
-    if (available.length === 1) {
+    if (isRestaurant) {
+      // VISTA RISTORATORE: Lista informativa di sola lettura senza select interattivo
+      restaurantBox = `
+        <div class="border border-dark p-3 bg-light mb-4">
+          <div class="small text-muted text-uppercase fw-bold mb-2" style="font-size: 0.7rem;">
+            <i class="bi bi-shop me-1"></i> ${isIt ? 'DISPONIBILITÀ PRESSO I RISTORANTI PARTNER' : 'AVAILABLE AT PARTNER RESTAURANTS'}
+          </div>
+          <ul class="list-unstyled mb-0 small">
+            ${available.map(r => `
+              <li class="py-1 border-bottom border-light-subtle d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-uppercase">${r.name || r.restaurantName}</span>
+                <span class="text-muted font-monospace">${r.address || r.restaurantAddress || 'Sede'}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    } else if (available.length === 1) {
       restaurantBox = `
         <div class="border border-dark p-3 bg-white mb-4">
           <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">
@@ -122,9 +142,27 @@ function renderMealView() {
     `;
   }
 
-  // Barra di acquisto
+  // Barra di acquisto o box informativo gestionale
   let actionBox = '';
-  if (canOrder) {
+  if (isRestaurant) {
+    actionBox = `
+      <div class="border-top pt-4 mt-auto">
+        <div class="border border-dark p-3 bg-light d-flex justify-content-between align-items-center">
+          <div>
+            <span class="badge bg-black text-white rounded-0 text-uppercase mb-1" style="font-size: 0.65rem;">
+              ${isIt ? 'AREA GESTIONALE' : 'MANAGEMENT VIEW'}
+            </span>
+            <div class="small text-muted">
+              ${isIt ? 'Accesso con account Ristoratore (Funzionalità di acquisto disabilitata).' : 'Logged in as Restaurant account (Ordering is disabled).'}
+            </div>
+          </div>
+          <a href="catalog.html" class="btn btn-outline-dark rounded-0 fw-bold text-uppercase px-3 py-2 btn-sm">
+            ${isIt ? 'Torna al Catalogo' : 'Back to Catalog'}
+          </a>
+        </div>
+      </div>
+    `;
+  } else if (canOrder) {
     actionBox = `
       <div class="border-top pt-4 mt-auto d-flex gap-2 align-items-stretch" style="height: 75px;">
         <div class="d-flex align-items-center border border-dark bg-white">
@@ -212,6 +250,10 @@ window.changeQty = function(delta) {
 
 window.addToCart = function() {
   if (!currentMeal) return;
+
+  const userRole = localStorage.getItem('userRole');
+  if (userRole === 'restaurant') return;
+
   const isIt = currentLang === 'IT';
 
   if (!selectedRestaurantId) {
