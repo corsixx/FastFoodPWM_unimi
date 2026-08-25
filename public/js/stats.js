@@ -3,6 +3,7 @@
 let revenueChartInstance = null;
 let topDishesChartInstance = null;
 let restaurantOrders = [];
+let statsPollingInterval = null;
 
 // Inizializzazione coordinata all'iniezione dei componenti di utils.js
 document.addEventListener('componentsLoaded', async () => {
@@ -16,13 +17,24 @@ document.addEventListener('componentsLoaded', async () => {
   }
 
   await loadRestaurantStats();
+
+  // Auto-polling rapido ogni 3 secondi (3000 ms) per sincronizzazione live comande e incassi
+  if (statsPollingInterval) clearInterval(statsPollingInterval);
+  statsPollingInterval = setInterval(async () => {
+    await loadRestaurantStats(true);
+  }, 3000);
+});
+
+// Pulizia del timer al cambio pagina
+window.addEventListener('beforeunload', () => {
+  if (statsPollingInterval) clearInterval(statsPollingInterval);
 });
 
 window.updateView = function() {
   renderOrdersTable();
 };
 
-async function loadRestaurantStats() {
+async function loadRestaurantStats(isSilent = false) {
   try {
     // 1. Recupera dati del profilo ristorante, statistiche aggregate e lista ordini
     const [profileRes, statsRes, ordersRes] = await Promise.allSettled([
@@ -40,10 +52,10 @@ async function loadRestaurantStats() {
 
     // Dati ordini
     restaurantOrders = ordersRes.status === 'fulfilled' 
-      ? (Array.isArray(ordersRes.value) ? ordersRes.value : (ordersRes.value.orders || [])) 
+      ? (Array.isArray(ordersRes.value) ? ordersRes.value : (ordersRes.value?.orders || [])) 
       : [];
 
-    // Dati statistiche avanzate (Rotta 5)
+    // Dati statistiche aggregate
     const statsData = statsRes.status === 'fulfilled' ? statsRes.value : null;
 
     updateKPIs(statsData);
@@ -51,7 +63,7 @@ async function loadRestaurantStats() {
     renderOrdersTable();
 
   } catch (err) {
-    console.error('Errore caricamento dashboard statistiche:', err);
+    if (!isSilent) console.error('Errore caricamento dashboard statistiche:', err);
   }
 }
 
@@ -126,6 +138,7 @@ function renderCharts(statsData) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false, // Disabilita animazione per non far sfarfallare il grafico durante il polling
         plugins: {
           legend: { display: false }
         },
@@ -152,7 +165,6 @@ function renderCharts(statsData) {
       topLabels = topSlice.map(d => d._id);
       topData = topSlice.map(d => d.totalQuantitySold);
     } else {
-      // Calcolo al volo dai piatti venduti
       const countMap = {};
       restaurantOrders.forEach(o => {
         if (Array.isArray(o.items)) {
@@ -182,6 +194,7 @@ function renderCharts(statsData) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false, // Evita ridisegnamenti continui a ogni tick di 3 secondi
         plugins: {
           legend: { position: 'bottom' }
         }
@@ -271,7 +284,7 @@ window.quickUpdateStatus = async function(orderId, newStatus) {
     });
 
     if (res) {
-      await loadRestaurantStats();
+      await loadRestaurantStats(true);
     }
   } catch (err) {
     alert('Errore aggiornamento: ' + err.message);
