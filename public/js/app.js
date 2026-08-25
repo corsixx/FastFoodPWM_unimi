@@ -2,18 +2,10 @@
 
 let allMeals = [];
 let userFavoriteCategory = '';
-let currentCategory = '';
 let selectedMealForCart = null;
 
 // Avvio dopo il caricamento componenti da utils.js
 document.addEventListener('componentsLoaded', async () => {
-  // 1. Legge la categoria dall'URL se l'utente proviene da un redirect (es. ?category=Beef)
-  const urlParams = new URLSearchParams(window.location.search);
-  const catParam = urlParams.get('category');
-  if (catParam) {
-    currentCategory = decodeURIComponent(catParam);
-  }
-
   await loadUserProfilePreference();
   await loadCategories();
   await loadHomeMeals();
@@ -26,7 +18,7 @@ window.updateView = function() {
 };
 
 /**
- * Recupera la preferenza del cliente
+ * 1. Recupera la preferenza del cliente
  */
 async function loadUserProfilePreference() {
   const token = localStorage.getItem('token');
@@ -38,25 +30,18 @@ async function loadUserProfilePreference() {
   }
 
   try {
-    const profile = await apiRequest('/auth/me');
-    if (profile && profile.favoriteCategory && profile.favoriteCategory.trim() !== '') {
-      userFavoriteCategory = profile.favoriteCategory.trim();
+    const profile = await apiRequest('/auth/me').catch(() => apiRequest('/users/me'));
+    const user = profile.user || profile;
+    if (user && user.favoriteCategory && user.favoriteCategory.trim() !== '') {
+      userFavoriteCategory = user.favoriteCategory.trim();
     }
   } catch (err) {
-    try {
-      const altProfile = await apiRequest('/users/me');
-      const p = altProfile.user || altProfile;
-      if (p && p.favoriteCategory && p.favoriteCategory.trim() !== '') {
-        userFavoriteCategory = p.favoriteCategory.trim();
-      }
-    } catch (e) {
-      userFavoriteCategory = '';
-    }
+    userFavoriteCategory = '';
   }
 }
 
 /**
- * Caricamento categorie
+ * 2. Caricamento categorie e reindirizzamento al catalogo
  */
 async function loadCategories() {
   try {
@@ -66,11 +51,11 @@ async function loadCategories() {
 
     const allLabel = currentLang === 'IT' ? 'ALL / TUTTO' : 'ALL / FULL';
     container.innerHTML = `
-      <button class="nav-category-link ${currentCategory === '' ? 'active' : ''}" onclick="filterCategory('', this)" id="btn-cat-all">
+      <button type="button" class="nav-category-link active" onclick="goToCatalogCategory('')" id="btn-cat-all">
         ${allLabel}
       </button>
       ${categories.map(cat => `
-        <button class="nav-category-link ${currentCategory.toLowerCase() === cat.toLowerCase() ? 'active' : ''}" onclick="filterCategory('${cat.replace(/'/g, "\\'")}', this)">
+        <button type="button" class="nav-category-link" onclick="goToCatalogCategory('${cat.replace(/'/g, "\\'")}')">
           ${cat.toUpperCase()}
         </button>
       `).join('')}
@@ -80,53 +65,27 @@ async function loadCategories() {
   }
 }
 
-window.filterCategory = function(cat, btnEl) {
-  currentCategory = cat;
-  
-  const allBtns = document.querySelectorAll('#categories-nav .nav-category-link');
-  allBtns.forEach(b => b.classList.remove('active'));
-  if (btnEl) btnEl.classList.add('active');
+window.goToCatalogCategory = function(cat) {
+  if (!cat || cat.trim() === '') {
+    window.location.href = 'catalog.html';
+  } else {
+    window.location.href = `catalog.html?category=${encodeURIComponent(cat.trim())}`;
+  }
+};
 
-  // Aggiorna l'URL nella barra del browser per coerenza (senza ricaricare la pagina)
-  const newUrl = cat ? `?category=${encodeURIComponent(cat)}` : window.location.pathname;
-  window.history.replaceState({}, '', newUrl);
-
-  updateSectionHeaders();
-  renderMealsGrid();
+window.filterCategory = function(cat) {
+  window.goToCatalogCategory(cat);
 };
 
 /**
- * Caricamento piatti
+ * 3. Caricamento piatti: Nuove Aggiunte (New In)
  */
 async function loadHomeMeals() {
   try {
-    const [mealsData, ordersData] = await Promise.allSettled([
-      apiRequest('/meals'),
-      apiRequest('/orders')
-    ]);
+    const mealsData = await apiRequest('/meals');
+    const rawList = Array.isArray(mealsData) ? mealsData : (mealsData.meals || []);
 
-    const rawList = mealsData.status === 'fulfilled'
-      ? (Array.isArray(mealsData.value) ? mealsData.value : (mealsData.value?.meals || []))
-      : [];
-
-    const ordersList = ordersData.status === 'fulfilled'
-      ? (Array.isArray(ordersData.value) ? ordersData.value : (ordersData.value?.orders || []))
-      : [];
-
-    // Calcolo popolarità per la home (più venduti)
-    const salesCount = {};
-    ordersList.forEach(ord => {
-      if (Array.isArray(ord.items)) {
-        ord.items.forEach(it => {
-          const mId = it.meal?._id || it.meal || it.mealId;
-          if (mId) {
-            salesCount[mId] = (salesCount[mId] || 0) + (Number(it.quantity) || 1);
-          }
-        });
-      }
-    });
-
-    // De-duplicazione sicura per ID
+    // Deduplicazione per ID
     const uniqueMap = new Map();
     rawList.forEach(m => {
       const key = String(m._id || m.id);
@@ -137,11 +96,12 @@ async function loadHomeMeals() {
 
     const uniqueList = Array.from(uniqueMap.values());
 
-    // Ordina: i più venduti per primi
+    // Ordine NEW IN: i piatti aggiunti più di recente in cima
     allMeals = uniqueList.sort((a, b) => {
-      const salesA = salesCount[a._id] || salesCount[a.id] || 0;
-      const salesB = salesCount[b._id] || salesCount[b.id] || 0;
-      return salesB - salesA;
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+      return String(b._id || b.id).localeCompare(String(a._id || a.id));
     });
 
     updateSectionHeaders();
@@ -154,6 +114,9 @@ async function loadHomeMeals() {
   }
 }
 
+/**
+ * 4. Intestazioni dinamiche: Preferenze per cliente loggato, NEW IN per tutti gli altri
+ */
 function updateSectionHeaders() {
   const badgeEl = document.getElementById('home-section-badge');
   const titleEl = document.getElementById('txt-popular-title');
@@ -164,13 +127,7 @@ function updateSectionHeaders() {
 
   if (!titleEl) return;
 
-  if (currentCategory) {
-    if (badgeEl) badgeEl.textContent = isIt ? 'CATEGORIA SELEZIONATA' : 'SELECTED CATEGORY';
-    titleEl.textContent = currentCategory.toUpperCase();
-    if (subLabel) subLabel.textContent = isIt ? `Filtro attivo su ${currentCategory}` : `Filtered by ${currentCategory}`;
-    return;
-  }
-
+  // CASO 1: Cliente loggato con preferenza impostata
   if (token && role === 'customer' && userFavoriteCategory) {
     if (badgeEl) badgeEl.textContent = isIt ? 'SCELTI PER TE' : 'RECOMMENDED FOR YOU';
     titleEl.textContent = `${isIt ? 'PIATTI A BASE DI' : 'DISHES WITH'} ${userFavoriteCategory.toUpperCase()}`;
@@ -178,25 +135,27 @@ function updateSectionHeaders() {
     return;
   }
 
-  if (badgeEl) badgeEl.textContent = isIt ? 'IN EVIDENZA' : 'FEATURED';
-  titleEl.textContent = isIt ? 'I PIÙ POPOLARI / DISPONIBILI ORA' : 'MOST POPULAR / AVAILABLE NOW';
-  if (subLabel) subLabel.textContent = isIt ? 'I piatti più ordinati dalla community' : 'Takeout dishes ready at partner restaurants';
+  // CASO 2: Utente non loggato, Ristoratore o Cliente senza preferenza -> NEW IN
+  if (badgeEl) badgeEl.textContent = isIt ? 'NUOVE AGGIUNTE' : 'JUST ADDED';
+  titleEl.textContent = isIt ? 'NEW IN / GLI ULTIMI ARRIVI' : 'NEW IN / LATEST ARRIVALS';
+  if (subLabel) subLabel.textContent = isIt ? 'Le ultime ricette e specialità inserite nel menu' : 'Latest recipes and specialties added to the menu';
 }
 
+/**
+ * 5. Rendering della griglia piatti
+ */
 window.renderMealsGrid = function() {
   const grid = document.getElementById('meals-grid');
   if (!grid) return;
 
   const role = localStorage.getItem('userRole');
   const token = localStorage.getItem('token');
+  const isRestaurant = role === 'restaurant';
+  const isIt = currentLang === 'IT';
   let list = [...allMeals];
 
-  // Filtro Categoria dall'URL o dai bottoni
-  if (currentCategory) {
-    list = list.filter(m => (m.strCategory || '').toLowerCase() === currentCategory.toLowerCase());
-  } 
-  // Filtro preferenza utente (solo se non c'è una categoria specifica selezionata)
-  else if (token && role === 'customer' && userFavoriteCategory) {
+  // Se cliente loggato con preferenza, filtra solo i piatti della sua categoria
+  if (token && role === 'customer' && userFavoriteCategory) {
     const prefList = list.filter(m => (m.strCategory || '').toLowerCase() === userFavoriteCategory.toLowerCase());
     list = prefList.length > 0 ? prefList : list;
   }
@@ -215,7 +174,7 @@ window.renderMealsGrid = function() {
   const pageItems = finalUnique.slice(0, 16);
 
   if (pageItems.length === 0) {
-    const noMealsMsg = currentLang === 'IT' ? 'Nessun piatto trovato per questa selezione.' : 'No meals found for this selection.';
+    const noMealsMsg = isIt ? 'Nessun piatto trovato per questa selezione.' : 'No meals found for this selection.';
     grid.innerHTML = `<div class="col-12 text-center py-5 text-muted small">${noMealsMsg}</div>`;
     return;
   }
@@ -225,38 +184,21 @@ window.renderMealsGrid = function() {
     const thumbUrl = m.strMealThumb || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
     const price = (Number(m.price) || 8.50).toFixed(2);
     const prepTime = m.preparationTime || 15;
-    const isRestaurant = role === 'restaurant';
 
-    let actionsHtml = '';
-    
-    // LOGICA CORRETTA PER I BOTTONI (Grafica originale ripristinata)
-    if (isRestaurant) {
-      // Il ristoratore vede solo il tasto unico "Vedi Scheda"
-      actionsHtml = `
-        <button type="button" class="btn-card-action btn-card-view w-100" style="border-right: none;" onclick="goToMealPage('${m._id}')">
-          <i class="bi bi-journal-bookmark"></i> ${currentLang === 'IT' ? 'VEDI SCHEDA' : 'VIEW RECIPE'}
-        </button>
-      `;
-    } else if (hasRest) {
-      // Cliente con piatto a menù: 2 tasti affiancati perfetti
-      actionsHtml = `
-        <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
-          <i class="bi bi-eye"></i> ${currentLang === 'IT' ? 'VEDI' : 'VIEW'}
-        </button>
+    const canAddToCart = !isRestaurant && hasRest;
+
+    const cartBtnHtml = canAddToCart
+      ? `
         <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}')">
-          <i class="bi bi-bag-plus"></i> ${currentLang === 'IT' ? '+ CARRELLO' : '+ ADD'}
+          <i class="bi bi-bag-plus"></i> ${isIt ? '+ CARRELLO' : '+ ADD'}
+        </button>
+      `
+      : `
+        <button type="button" class="btn-card-action btn-card-cart disabled text-muted" style="cursor: not-allowed; opacity: 0.65;" title="${isRestaurant ? (isIt ? 'Ordini disabilitati per account ristoratore' : 'Ordering disabled for restaurant account') : (isIt ? 'Piatto non disponibile nei ristoranti' : 'Dish currently unavailable')}">
+          <i class="bi bi-slash-circle"></i> ${isIt ? 'NON DISP.' : 'UNAVAIL.'}
         </button>
       `;
-    } else {
-      // Cliente con piatto non a menù: Tasto unico "Vedi Scheda" (non aggiungibile)
-      actionsHtml = `
-        <button type="button" class="btn-card-action btn-card-view w-100" style="border-right: none;" onclick="goToMealPage('${m._id}')">
-          <i class="bi bi-journal-bookmark"></i> ${currentLang === 'IT' ? 'VEDI SCHEDA' : 'VIEW RECIPE'}
-        </button>
-      `;
-    }
 
-    // Struttura della card originale mantenuta per evitare tagli alle immagini!
     return `
       <div class="col-6 col-md-4 col-lg-3">
         <div class="product-card">
@@ -274,7 +216,10 @@ window.renderMealsGrid = function() {
           </div>
 
           <div class="card-action-group">
-            ${actionsHtml}
+            <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
+              <i class="bi bi-eye"></i> ${isIt ? 'VEDI' : 'VIEW'}
+            </button>
+            ${cartBtnHtml}
           </div>
         </div>
       </div>
@@ -286,7 +231,13 @@ window.goToMealPage = function(mealId) {
   window.location.href = `meal.html?id=${encodeURIComponent(mealId)}`;
 };
 
+/**
+ * 6. Modale di scelta ristorante per il carrello
+ */
 window.promptRestaurantSelection = function(mealId) {
+  const role = localStorage.getItem('userRole');
+  if (role === 'restaurant') return;
+
   const meal = allMeals.find(m => String(m._id) === String(mealId));
   if (!meal) return;
 
@@ -329,7 +280,8 @@ window.promptRestaurantSelection = function(mealId) {
 };
 
 window.confirmAddToCartWithRestaurant = function(restId, restName) {
-  if (!selectedMealForCart) return;
+  const role = localStorage.getItem('userRole');
+  if (role === 'restaurant' || !selectedMealForCart) return;
 
   const priceNum = Number(selectedMealForCart.price) || 8.50;
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
