@@ -300,7 +300,7 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     const updatedOrder = await Order.findOneAndUpdate(
       { _id: req.params.id, restaurant: req.user.id },
       { $set: { status } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!updatedOrder) {

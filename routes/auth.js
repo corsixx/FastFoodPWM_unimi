@@ -320,7 +320,7 @@ router.put('/me', authMiddleware, async (req, res) => {
           IVAnumber 
         } 
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).select('-password');
 
     if (!updatedUser) {

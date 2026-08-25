@@ -145,7 +145,7 @@ router.post('/menu/add-existing', authMiddleware, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { $addToSet: { restaurantMenu: mealId } },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password');
 
     res.status(200).json({ message: "Piatto aggiunto al menu!", menu: updatedUser.restaurantMenu });
@@ -257,7 +257,7 @@ router.delete('/menu/:mealId', authMiddleware, async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { $pull: { restaurantMenu: mealId } },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-password');
 
     const meal = await Meal.findById(mealId);
