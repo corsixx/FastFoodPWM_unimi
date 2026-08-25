@@ -284,13 +284,13 @@ router.get('/:id', async (req, res) => {
 });
 
 // ============================================================================
-// 5. CREAZIONE PIATTO GENERALE (Admin o Ristoratori)
+// 5. CREAZIONE PIATTO GENERALE ADMIN
 // ============================================================================
 /**
  * @swagger
  * /api/meals:
  *   post:
- *     summary: Inserisce un nuovo piatto nel catalogo (Admin crea globale, Ristorante crea e associa al menu)
+ *     summary: Inserisce un nuovo piatto nel catalogo globale di sistema (Solo Admin)
  *     tags: [Piatti]
  *     security:
  *       - bearerAuth: []
@@ -306,7 +306,7 @@ router.get('/:id', async (req, res) => {
  *             properties:
  *               strMeal:
  *                 type: string
- *                 example: "Classic Double Smash Burger"
+ *                 example: "Cheeseburger Classico"
  *               strCategory:
  *                 type: string
  *                 example: "Beef"
@@ -315,42 +315,36 @@ router.get('/:id', async (req, res) => {
  *                 example: "American"
  *               strInstructions:
  *                 type: string
- *                 example: "Grigliare la carne e servire con salsa e formaggio."
+ *                 example: "Cuocere e assemblare."
  *               price:
  *                 type: number
- *                 example: 11.50
+ *                 example: 8.50
  *               preparationTime:
  *                 type: number
- *                 example: 12
+ *                 example: 10
  *               ingredients:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["Beef Patty", "Cheddar Cheese", "Brioche Bun"]
+ *                 example: ["Manzo", "Cheddar", "Pane"]
  *               measures:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["200g", "2 fette", "1"]
+ *                 example: ["150g", "1 fetta", "1"]
  *               strMealThumb:
  *                 type: string
  *                 example: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd"
- *               strTags:
- *                 type: string
- *                 example: "Burger,FastFood,Meat"
- *               strYoutube:
- *                 type: string
- *                 example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
  *     responses:
  *       201:
- *         description: Piatto creato con successo
+ *         description: Piatto globale inserito nel catalogo con successo
  *       403:
- *         description: Accesso negato
+ *         description: Accesso negato (solo Admin)
  */
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'restaurant') {
-      return res.status(403).json({ message: "Accesso negato: operazione riservata ad amministratori e ristoratori." });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Accesso negato: solo l'amministratore può inserire piatti nel catalogo globale." });
     }
 
     const {
@@ -369,7 +363,7 @@ router.post('/', authMiddleware, async (req, res) => {
       preparationTime
     } = req.body;
 
-    const mealData = {
+    const newMeal = new Meal({
       idMeal: idMeal || undefined,
       strMeal,
       strMealAlternate: strMealAlternate || null,
@@ -383,17 +377,11 @@ router.post('/', authMiddleware, async (req, res) => {
       measures: Array.isArray(measures) ? measures : [],
       price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,
       preparationTime: preparationTime !== undefined && !isNaN(preparationTime) ? Number(preparationTime) : 15,
-      restaurantId: req.user.role === 'restaurant' ? req.user.id : null
-    };
+      restaurantId: null // Nessun proprietario: appartiene al dataset comune
+    });
 
-    const newMeal = new Meal(mealData);
     const savedMeal = await newMeal.save();
-
-    if (req.user.role === 'restaurant') {
-      await User.findByIdAndUpdate(req.user.id, { $addToSet: { restaurantMenu: savedMeal._id } });
-    }
-
-    res.status(201).json({ message: "Piatto creato con successo!", meal: savedMeal });
+    res.status(201).json({ message: "Piatto globale creato con successo!", meal: savedMeal });
   } catch (error) {
     res.status(500).json({ message: "Errore durante la creazione del piatto.", error: error.message });
   }
