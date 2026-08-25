@@ -1,3 +1,5 @@
+// public/js/restaurantCatalog.js
+
 let allRestaurants = [];
 let filteredRestaurants = [];
 let currentPage = 1;
@@ -153,7 +155,7 @@ function renderGrid() {
         <div class="card h-100 rounded-0 border-dark shadow-sm position-relative bg-white d-flex flex-column overflow-hidden">
           
           <!-- Immagine di Copertina Grande da 270px -->
-          <div class="position-relative overflow-hidden border-bottom border-dark" style="height: 270px; background: #f0f0f0;">
+          <div class="position-relative overflow-hidden border-bottom border-dark" style="height: 270px; background: #f0f0f0; cursor: pointer;" onclick="goToRestaurant('${restId}')">
             <img src="${rest.coverImage}" alt="${name}" class="w-100 h-100" 
                  style="object-fit: cover; transition: transform 0.4s ease;" 
                  onmouseover="this.style.transform='scale(1.06)'" 
@@ -173,7 +175,7 @@ function renderGrid() {
                   <i class="bi bi-tag me-1"></i>${category}
                 </span>
               </div>
-              <h4 class="fw-bold text-uppercase mb-2 text-truncate" style="font-family: 'Space Grotesk', sans-serif;">
+              <h4 class="fw-bold text-uppercase mb-2 text-truncate" style="font-family: 'Space Grotesk', sans-serif; cursor: pointer;" onclick="goToRestaurant('${restId}')">
                 ${name}
               </h4>
               <p class="text-muted small mb-0 text-truncate" style="font-size: 0.88rem;">
@@ -181,8 +183,8 @@ function renderGrid() {
               </p>
             </div>
 
-            <!-- Tasto Full-Width per il Catalogo Piatti del Locale -->
-            <a href="catalog.html?restaurantId=${restId}" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase py-3 d-flex justify-content-between align-items-center px-4 mt-2">
+            <!-- Tasto Full-Width diretto alla Scheda Dettaglio Locale (restaurantDetail.html) -->
+            <a href="restaurantDetail.html?id=${encodeURIComponent(restId)}" class="btn btn-dark rounded-0 w-100 fw-bold text-uppercase py-3 d-flex justify-content-between align-items-center px-4 mt-2">
               <span style="letter-spacing: 0.05em;">${isIt ? 'ESPLORA IL MENÙ' : 'EXPLORE MENU'}</span>
               <i class="bi bi-arrow-right fs-5"></i>
             </a>
@@ -195,6 +197,10 @@ function renderGrid() {
 
   renderPagination(totalPages);
 }
+
+window.goToRestaurant = function(restId) {
+  window.location.href = `restaurantDetail.html?id=${encodeURIComponent(restId)}`;
+};
 
 function renderPagination(totalPages) {
   const container = document.getElementById('pagination-controls');

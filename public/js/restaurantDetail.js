@@ -24,6 +24,7 @@ const i18n = {
     noMeals: 'Nessun piatto disponibile nel listino di questo ristorante al momento.',
     btnView: 'VEDI',
     btnCart: '+ CARRELLO',
+    btnCartDisabled: 'NON DISP.',
     prep: 'prep',
     emptyCart: 'Il tuo carrello è vuoto.',
     dCatalog: 'CATALOGO COMPLETO',
@@ -46,6 +47,7 @@ const i18n = {
     noMeals: 'No dishes available in this restaurant menu at the moment.',
     btnView: 'VIEW',
     btnCart: '+ ADD',
+    btnCartDisabled: 'UNAVAIL.',
     prep: 'prep',
     emptyCart: 'Your cart is empty.',
     dCatalog: 'FULL CATALOG',
@@ -125,14 +127,11 @@ async function loadRestaurantMenu() {
 
     currentMenu = Array.isArray(res.menu) ? res.menu.filter(Boolean) : [];
     
-    // ==========================================
-    // CALCOLO DINAMICO PREPARAZIONE MEDIA
-    // ==========================================
+    // Calcolo dinamico preparazione media
     const prepAvgEl = document.getElementById('txt-prep-time-avg');
     const t = i18n[currentLang];
     if (prepAvgEl) {
       if (currentMenu.length > 0) {
-        // Somma tutti i tempi di preparazione e li divide per il numero dei piatti
         const totalPrep = currentMenu.reduce((sum, m) => sum + (Number(m.preparationTime) || 15), 0);
         const avg = Math.round(totalPrep / currentMenu.length);
         prepAvgEl.innerHTML = `${t.prepAvg} ${avg} min`;
@@ -140,7 +139,6 @@ async function loadRestaurantMenu() {
         prepAvgEl.innerHTML = `Nessun piatto`;
       }
     }
-    // ==========================================
 
     buildCategoriesFilter();
     renderMenuGrid();
@@ -183,12 +181,15 @@ function filterRestaurantMenu(category, btnEl) {
 }
 
 /**
- * Rendering Griglia Piatti
+ * Rendering Griglia Piatti con controllo Ristoratore
  */
 function renderMenuGrid() {
   const grid = document.getElementById('restaurant-meals-grid');
   const countLabel = document.getElementById('meals-count-label');
   const t = i18n[currentLang];
+  const role = localStorage.getItem('userRole');
+  const isRestaurant = role === 'restaurant';
+
   if (!grid) return;
 
   let list = [...currentMenu];
@@ -213,9 +214,21 @@ function renderMenuGrid() {
     const prepTime = m.preparationTime || 15;
     const cleanName = (m.strMeal || 'Piatto').replace(/'/g, "\\'");
 
-    // Nella pagina del ristorante, l'ID ristorante è quello della pagina corrente
     const currentRestId = restaurantData._id || restaurantData.id;
     const currentRestName = (restaurantData.restaurantName || restaurantData.name || 'Ristorante').replace(/'/g, "\\'");
+
+    // Secondo pulsante: attivo se cliente/visitatore, disabilitato se ristoratore
+    const cartButtonHtml = isRestaurant
+      ? `
+        <button type="button" class="btn-card-action btn-card-cart disabled text-muted" style="cursor: not-allowed; opacity: 0.65;" title="${currentLang === 'IT' ? 'Ordini disabilitati per account ristoratore' : 'Ordering disabled for restaurant account'}">
+          <i class="bi bi-slash-circle"></i> ${t.btnCartDisabled}
+        </button>
+      `
+      : `
+        <button type="button" class="btn-card-action btn-card-cart" onclick="directAddToCart('${m._id}', '${cleanName}', ${priceNum}, '${thumbUrl}', ${prepTime}, '${currentRestId}', '${currentRestName}')">
+          <i class="bi bi-bag-plus"></i> ${t.btnCart}
+        </button>
+      `;
 
     return `
       <div class="col-6 col-md-4 col-lg-3">
@@ -241,9 +254,7 @@ function renderMenuGrid() {
             <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}', '${currentRestId}')">
               <i class="bi bi-eye"></i> ${t.btnView}
             </button>
-            <button type="button" class="btn-card-action btn-card-cart" onclick="directAddToCart('${m._id}', '${cleanName}', ${priceNum}, '${thumbUrl}', ${prepTime}, '${currentRestId}', '${currentRestName}')">
-              <i class="bi bi-bag-plus"></i> ${t.btnCart}
-            </button>
+            ${cartButtonHtml}
           </div>
 
         </div>
@@ -257,9 +268,12 @@ function goToMealPage(mealId, restId) {
 }
 
 /**
- * Aggiunta diretta al carrello (sei già nel ristorante, non serve la modale)
+ * Aggiunta diretta al carrello (bloccata per ristoratori)
  */
 function directAddToCart(id, name, price, thumb, preparationTime, restId, restName) {
+  const role = localStorage.getItem('userRole');
+  if (role === 'restaurant') return;
+
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
   
   const existing = cart.find(i => String(i.id) === String(id) && String(i.restaurantId) === String(restId));
@@ -283,7 +297,6 @@ function directAddToCart(id, name, price, thumb, preparationTime, restId, restNa
   renderCartBadge();
   renderDrawerCartUI();
 
-  // Apri il carrello
   const cartDrawerEl = document.getElementById('cartOffcanvas');
   if (cartDrawerEl) {
     bootstrap.Offcanvas.getOrCreateInstance(cartDrawerEl).show();
