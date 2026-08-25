@@ -1,14 +1,13 @@
+// routes/restaurants.js
 const express = require('express');
 const router = express.Router();
-
 const User = require('../models/User');
 const Meal = require('../models/Meal');
 const authMiddleware = require('../middleware/auth');
 
-// ******************************************************************************
+// ============================================================================
 // 1. RICERCA E CATALOGO RISTORANTI
-// ******************************************************************************
-
+// ============================================================================
 /**
  * @swagger
  * /api/restaurants:
@@ -33,11 +32,8 @@ const authMiddleware = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     const { name, city } = req.query;
-
-    // Filtriamo alla radice: consideriamo solo gli account con ruolo 'restaurant'
     let filter = { role: 'restaurant' };
 
-    // $regex permette la ricerca parziale, 'i' ignora maiuscole/minuscole
     if (name && name.trim() !== '') {
       filter.restaurantName = { $regex: name.trim(), $options: 'i' };
     }
@@ -45,7 +41,6 @@ router.get('/', async (req, res) => {
       filter.restaurantAddress = { $regex: city.trim(), $options: 'i' };
     }
 
-    // select('-password') esclude l'hash della password dai dati inviati al client
     const restaurants = await User.find(filter).select('-password');
     res.status(200).json(restaurants);
   } catch (error) {
@@ -53,11 +48,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-
-// ******************************************************************************
+// ============================================================================
 // 2. RECUPERO DEL MENU DI UN SINGOLO RISTORANTE
-// ******************************************************************************
-
+// ============================================================================
 /**
  * @swagger
  * /api/restaurants/{id}/menu:
@@ -100,10 +93,9 @@ router.get('/:id/menu', async (req, res) => {
   }
 });
 
-
-// ******************************************************************************
-// 3. GESTIONE MENU: AGGIUNTA PIATTO DAL CATALOGO GENERALE
-// ******************************************************************************
+// ============================================================================
+// 3. AGGIUNTA PIATTO DA CATALOGO GENERALE
+// ============================================================================
 /**
  * @swagger
  * /api/restaurants/menu/add-existing:
@@ -154,16 +146,14 @@ router.post('/menu/add-existing', authMiddleware, async (req, res) => {
   }
 });
 
-
-// ******************************************************************************
-// 4. GESTIONE MENU: CREAZIONE PIATTO PERSONALIZZATO
-// ******************************************************************************
-
+// ============================================================================
+// 4. CREAZIONE PIATTO PERSONALIZZATO (Solo Ristoratori)
+// ============================================================================
 /**
  * @swagger
  * /api/restaurants/menu/create-custom:
  *   post:
- *     summary: Crea un nuovo piatto personalizzato e lo inserisce nel menu (Solo Ristoratori)
+ *     summary: Crea un nuovo piatto personalizzato e lo inserisce nel proprio menu
  *     tags: [Ristoranti]
  *     security:
  *       - bearerAuth: []
@@ -176,23 +166,49 @@ router.post('/menu/add-existing', authMiddleware, async (req, res) => {
  *             required:
  *               - strMeal
  *               - strCategory
- *               - price
  *             properties:
  *               strMeal:
  *                 type: string
+ *                 example: "Classic Double Smash Burger"
  *               strCategory:
  *                 type: string
+ *                 example: "Beef"
+ *               strArea:
+ *                 type: string
+ *                 example: "American"
+ *               strInstructions:
+ *                 type: string
+ *                 example: "Grigliare la carne e servire con salsa e formaggio."
  *               price:
  *                 type: number
+ *                 example: 11.50
+ *               preparationTime:
+ *                 type: number
+ *                 example: 12
  *               ingredients:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 example: ["Beef Patty", "Cheddar Cheese", "Brioche Bun", "Burger Sauce"]
+ *               measures:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["200g", "2 fette", "1", "30g"]
  *               strMealThumb:
  *                 type: string
+ *                 example: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
+ *               strTags:
+ *                 type: string
+ *                 example: "Burger,FastFood"
+ *               strYoutube:
+ *                 type: string
+ *                 example: ""
  *     responses:
  *       201:
- *         description: Piatto creato e collegato al ristorante
+ *         description: Piatto personalizzato creato e collegato al ristorante
+ *       403:
+ *         description: Operazione consentita solo ai ristoratori
  */
 router.post('/menu/create-custom', authMiddleware, async (req, res) => {
   try {
@@ -200,16 +216,39 @@ router.post('/menu/create-custom', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Operazione consentita solo ai ristoratori." });
     }
 
-    const { strMeal, strCategory, price, ingredients, strMealThumb } = req.body;
+    const {
+      idMeal,
+      strMeal,
+      strMealAlternate,
+      strCategory,
+      strArea,
+      strInstructions,
+      strMealThumb,
+      strTags,
+      strYoutube,
+      ingredients,
+      measures,
+      price,
+      preparationTime
+    } = req.body;
 
     const newMeal = new Meal({
+      idMeal: idMeal || undefined,
       strMeal,
+      strMealAlternate: strMealAlternate || null,
       strCategory,
-      price,
-      ingredients: ingredients || [],
+      strArea: strArea || "General",
+      strInstructions: strInstructions || "",
       strMealThumb: strMealThumb || "",
+      strTags: strTags || null,
+      strYoutube: strYoutube || "",
+      ingredients: Array.isArray(ingredients) ? ingredients : [],
+      measures: Array.isArray(measures) ? measures : [],
+      price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,
+      preparationTime: preparationTime !== undefined && !isNaN(preparationTime) ? Number(preparationTime) : 15,
       restaurantId: req.user.id
     });
+
     const savedMeal = await newMeal.save();
 
     await User.findByIdAndUpdate(req.user.id, { $addToSet: { restaurantMenu: savedMeal._id } });
@@ -220,11 +259,9 @@ router.post('/menu/create-custom', authMiddleware, async (req, res) => {
   }
 });
 
-
-// ******************************************************************************
-// 5. GESTIONE MENU: RIMOZIONE PIATTO DAL MENU (E DAL DB SE PERSONALIZZATO)
-// ******************************************************************************
-
+// ============================================================================
+// 5. RIMOZIONE PIATTO DAL MENU (E DAL DB SE PERSONALIZZATO)
+// ============================================================================
 /**
  * @swagger
  * /api/restaurants/menu/{mealId}:
@@ -269,7 +306,6 @@ router.delete('/menu/:mealId', authMiddleware, async (req, res) => {
       message: "Piatto rimosso dal menu (ed eliminato dal catalogo se creato da te)!", 
       menu: updatedUser.restaurantMenu 
     });
-
   } catch (error) {
     res.status(500).json({ message: "Errore durante la rimozione del piatto.", error: error.message });
   }

@@ -1,10 +1,14 @@
+// routes/meals.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../models/User'); // Modello Mongoose per interrogare la collezione 'users'
-const authMiddleware = require('../middleware/auth'); // Middleware per la verifica del token JWT
-const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la collezione 'meals'
+const User = require('../models/User');
+const Meal = require('../models/Meal');
+const authMiddleware = require('../middleware/auth');
 
+// ============================================================================
+// 1. RICERCA E CATALOGO PIATTI
+// ============================================================================
 /**
  * @swagger
  * /api/meals:
@@ -49,45 +53,31 @@ const Meal = require('../models/Meal'); // Modello Mongoose per interrogare la c
  *       500:
  *         description: Errore del server
  */
-// *****************************************************************************
-// RICERCA E CATALOGO PIATTI
-// *****************************************************************************
 router.get('/', async (req, res) => {
   try {
     const { name, category, area, maxPrice, ingredient, restaurantId } = req.query;
     let filter = {};
 
-    // 1. Filtro per nome (case-insensitive)
     if (name && name.trim() !== '') {
       filter.strMeal = { $regex: name.trim(), $options: 'i' };
     }
-
-    // 2. Filtro per categoria esatta
     if (category && category.trim() !== '') {
       filter.strCategory = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     }
-
-    // 3. Filtro per cucina/area
     if (area && area.trim() !== '') {
       filter.strArea = { $regex: new RegExp(`^${area.trim()}$`, 'i') };
     }
-
-    // 4. Filtro per prezzo massimo
     if (maxPrice && !isNaN(maxPrice)) {
       filter.price = { $lte: Number(maxPrice) };
     }
-
-    // 5. Ricerca per ingrediente dentro l'array ingredients
     if (ingredient && ingredient.trim() !== '') {
       filter.ingredients = { $elemMatch: { $regex: ingredient.trim(), $options: 'i' } };
     }
 
-    // 6. Recupera tutti i ristoranti con il loro menu attivo
     const restaurants = await User.find({ role: 'restaurant' })
       .select('_id restaurantName name restaurantAddress restaurantPhone restaurantMenu')
       .lean();
 
-    // Mappa piatto -> lista dei ristoranti che lo offrono (con de-duplicazione)
     const mealRestaurantsMap = new Map();
 
     restaurants.forEach(r => {
@@ -112,7 +102,6 @@ router.get('/', async (req, res) => {
       }
     });
 
-    // 7. Se è richiesto un restaurantId specifico nel filtro
     if (restaurantId && restaurantId.trim() !== '') {
       const targetRest = restaurants.find(r => String(r._id) === String(restaurantId.trim()));
       const validMealIds = targetRest && Array.isArray(targetRest.restaurantMenu) 
@@ -121,10 +110,7 @@ router.get('/', async (req, res) => {
       filter._id = { $in: validMealIds };
     }
 
-    // 8. Esegui la query piatti
     const meals = await Meal.find(filter).lean();
-
-    // 9. Arricchisci ogni piatto evitando duplicazioni
     const seenMealIds = new Set();
     const enrichedMeals = [];
 
@@ -135,7 +121,6 @@ router.get('/', async (req, res) => {
 
       const available = mealRestaurantsMap.get(mId) || [];
 
-      // Risoluzione prezzo: assicura che sia sempre un numero valido > 0
       let resolvedPrice = 8.50;
       if (meal.price !== undefined && meal.price !== null && !isNaN(meal.price) && Number(meal.price) > 0) {
         resolvedPrice = Number(meal.price);
@@ -153,18 +138,14 @@ router.get('/', async (req, res) => {
     });
 
     res.status(200).json(enrichedMeals);
-
   } catch (error) {
-    console.error("Errore durante il recupero dei piatti:", error);
-    res.status(500).json({ 
-      message: "Errore durante il recupero dei piatti.", 
-      error: error.message 
-    });
+    console.error("Errore recupero piatti:", error);
+    res.status(500).json({ message: "Errore durante il recupero dei piatti.", error: error.message });
   }
 });
 
 // ============================================================================
-// RECUPERO CATEGORIE UNICHE DAL DATABASE
+// 2. CATEGORIE UNICHE
 // ============================================================================
 /**
  * @swagger
@@ -186,23 +167,20 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-// ******************************************************************************
-// BACHECA: PIATTI CONSIGLIATI / OFFERTE IN BASE ALLE PREFERENZE (SOLO CLIENTI)
-// ******************************************************************************
+// ============================================================================
+// 3. BACHECA CONSIGLIATI (SOLO CLIENTI)
+// ============================================================================
 /**
  * @swagger
  * /api/meals/recommendations:
  *   get:
  *     summary: Recupera i piatti consigliati per la bacheca in base alla categoria preferita
- *     description: Legge la preferenza (favoriteCategory) impostata nel profilo del cliente autenticato e restituisce i piatti corrispondenti.
  *     tags: [Piatti]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista dei piatti raccomandati recuperata con successo
- *       400:
- *         description: L'utente non ha ancora impostato una categoria preferita
  *       403:
  *         description: Accesso riservato ai clienti registrati
  */
@@ -215,7 +193,7 @@ router.get('/recommendations', authMiddleware, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user || !user.favoriteCategory) {
       return res.status(200).json({ 
-        message: "Nessuna preferenza impostata. Ecco alcuni piatti casuali in evidenza.",
+        message: "Nessuna preferenza impostata. Ecco alcuni piatti in evidenza.",
         recommendations: await Meal.find().limit(6)
       });
     }
@@ -229,15 +207,14 @@ router.get('/recommendations', authMiddleware, async (req, res) => {
       count: recommendedMeals.length,
       recommendations: recommendedMeals
     });
-
   } catch (error) {
     res.status(500).json({ message: "Errore nel recupero dei piatti consigliati.", error: error.message });
   }
 });
 
-// ******************************************************************************
-// DETTAGLIO SINGOLO PIATTO PER MEAL.HTML
-// ******************************************************************************
+// ============================================================================
+// 4. DETTAGLIO SINGOLO PIATTO
+// ============================================================================
 /**
  * @swagger
  * /api/meals/{id}:
@@ -258,8 +235,6 @@ router.get('/recommendations', authMiddleware, async (req, res) => {
  *         description: ID non valido o mancante
  *       404:
  *         description: Piatto non trovato
- *       500:
- *         description: Errore del server
  */
 router.get('/:id', async (req, res) => {
   try {
@@ -270,20 +245,16 @@ router.get('/:id', async (req, res) => {
     }
 
     let meal = null;
-
     if (mongoose.Types.ObjectId.isValid(id)) {
       meal = await Meal.findById(id).lean();
     }
-
     if (!meal) {
       meal = await Meal.findOne({ idMeal: id }).lean();
     }
-
     if (!meal) {
       return res.status(404).json({ message: "Piatto non trovato nel catalogo." });
     }
 
-    // Trova tutti i ristoranti che hanno questo piatto nel loro menu
     const matchingRestaurants = await User.find({
       role: 'restaurant',
       restaurantMenu: meal._id
@@ -298,13 +269,11 @@ router.get('/:id', async (req, res) => {
 
     meal.restaurant = meal.availableRestaurants.length > 0 ? meal.availableRestaurants[0] : null;
 
-    // Risoluzione prezzo
     if (!meal.price || isNaN(meal.price) || Number(meal.price) <= 0) {
       meal.price = Number(meal.strPrice) || 8.50;
     } else {
       meal.price = Number(meal.price);
     }
-
     meal.preparationTime = Number(meal.preparationTime) || 15;
 
     res.status(200).json(meal);
@@ -314,14 +283,14 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ******************************************************************************
-// CREAZIONE PIATTO (Admin e Ristoratori Partner)
-// ******************************************************************************
+// ============================================================================
+// 5. CREAZIONE PIATTO GENERALE (Admin o Ristoratori)
+// ============================================================================
 /**
  * @swagger
  * /api/meals:
  *   post:
- *     summary: Inserisce un nuovo piatto nel catalogo (Admin o Ristorante)
+ *     summary: Inserisce un nuovo piatto nel catalogo (Admin crea globale, Ristorante crea e associa al menu)
  *     tags: [Piatti]
  *     security:
  *       - bearerAuth: []
@@ -333,25 +302,48 @@ router.get('/:id', async (req, res) => {
  *             type: object
  *             required:
  *               - strMeal
- *               - price
+ *               - strCategory
  *             properties:
  *               strMeal:
  *                 type: string
+ *                 example: "Classic Double Smash Burger"
  *               strCategory:
  *                 type: string
+ *                 example: "Beef"
  *               strArea:
  *                 type: string
+ *                 example: "American"
+ *               strInstructions:
+ *                 type: string
+ *                 example: "Grigliare la carne e servire con salsa e formaggio."
  *               price:
  *                 type: number
+ *                 example: 11.50
+ *               preparationTime:
+ *                 type: number
+ *                 example: 12
  *               ingredients:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 example: ["Beef Patty", "Cheddar Cheese", "Brioche Bun"]
+ *               measures:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["200g", "2 fette", "1"]
  *               strMealThumb:
  *                 type: string
+ *                 example: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd"
+ *               strTags:
+ *                 type: string
+ *                 example: "Burger,FastFood,Meat"
+ *               strYoutube:
+ *                 type: string
+ *                 example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
  *     responses:
  *       201:
- *         description: Piatto inserito con successo
+ *         description: Piatto creato con successo
  *       403:
  *         description: Accesso negato
  */
@@ -361,11 +353,38 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Accesso negato: operazione riservata ad amministratori e ristoratori." });
     }
 
-    const mealData = { ...req.body };
+    const {
+      idMeal,
+      strMeal,
+      strMealAlternate,
+      strCategory,
+      strArea,
+      strInstructions,
+      strMealThumb,
+      strTags,
+      strYoutube,
+      ingredients,
+      measures,
+      price,
+      preparationTime
+    } = req.body;
 
-    if (req.user.role === 'restaurant') {
-      mealData.restaurantId = req.user.id;
-    }
+    const mealData = {
+      idMeal: idMeal || undefined,
+      strMeal,
+      strMealAlternate: strMealAlternate || null,
+      strCategory,
+      strArea: strArea || "General",
+      strInstructions: strInstructions || "",
+      strMealThumb: strMealThumb || "",
+      strTags: strTags || null,
+      strYoutube: strYoutube || "",
+      ingredients: Array.isArray(ingredients) ? ingredients : [],
+      measures: Array.isArray(measures) ? measures : [],
+      price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,
+      preparationTime: preparationTime !== undefined && !isNaN(preparationTime) ? Number(preparationTime) : 15,
+      restaurantId: req.user.role === 'restaurant' ? req.user.id : null
+    };
 
     const newMeal = new Meal(mealData);
     const savedMeal = await newMeal.save();
@@ -380,9 +399,9 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// ******************************************************************************
-// MODIFICA PIATTO (Admin o Proprietario del Piatto)
-// ******************************************************************************
+// ============================================================================
+// 6. MODIFICA PIATTO
+// ============================================================================
 /**
  * @swagger
  * /api/meals/{id}:
@@ -415,7 +434,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'restaurant') {
-      return res.status(403).json({ message: "Accesso negato: solo l'amministratore o il proprietario possono modificare questo piatto." });
+      return res.status(403).json({ message: "Accesso negato: permessi insufficienti." });
     }
 
     const meal = await Meal.findById(req.params.id);
@@ -434,7 +453,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const updatedMeal = await Meal.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     res.status(200).json({ message: "Piatto modificato con successo!", meal: updatedMeal });
@@ -443,9 +462,9 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// ******************************************************************************
-// ELIMINAZIONE PIATTO (Admin o Proprietario del Piatto)
-// ******************************************************************************
+// ============================================================================
+// 7. ELIMINAZIONE PIATTO
+// ============================================================================
 /**
  * @swagger
  * /api/meals/{id}:
@@ -472,7 +491,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'restaurant') {
-      return res.status(403).json({ message: "Accesso negato: solo l'amministratore o il proprietario possono eliminare questo piatto." });
+      return res.status(403).json({ message: "Accesso negato: permessi insufficienti." });
     }
 
     const meal = await Meal.findById(req.params.id);
@@ -491,7 +510,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
     await Meal.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Piatto eliminato definitivamente.", id: req.params.id });
-
   } catch (error) {
     res.status(500).json({ message: "Errore durante l'eliminazione del piatto.", error: error.message });
   }
