@@ -14,8 +14,13 @@ let selectedMealForCart = null;
 document.addEventListener('componentsLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const restParam = urlParams.get('restaurant') || urlParams.get('restaurantId');
+  const catParam = urlParams.get('category');
+
   if (restParam) {
     currentRestaurantFilter = restParam;
+  }
+  if (catParam) {
+    currentCategory = decodeURIComponent(catParam);
   }
 
   await loadBackendCategories();
@@ -175,6 +180,8 @@ function renderMealsGrid(meals) {
   if (!grid) return;
 
   const isIt = currentLang === 'IT';
+  const role = localStorage.getItem('userRole');
+  const isRestaurant = role === 'restaurant';
 
   if (meals.length === 0) {
     const noMsg = isIt ? 'NESSUN PIATTO TROVATO CON I FILTRI SELEZIONATI.' : 'NO DISHES FOUND MATCHING YOUR FILTERS.';
@@ -183,10 +190,24 @@ function renderMealsGrid(meals) {
   }
 
   grid.innerHTML = meals.map(m => {
-    const hasRest = Array.isArray(m.availableRestaurants) && m.availableRestaurants.length > 0;
+    const hasRest = (Array.isArray(m.availableRestaurants) && m.availableRestaurants.length > 0) || Boolean(currentRestaurantFilter);
     const thumbUrl = m.strMealThumb || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80';
     const price = (Number(m.price) || 8.50).toFixed(2);
     const prepTime = m.preparationTime || 15;
+
+    const canAddToCart = !isRestaurant && hasRest;
+
+    const cartBtnHtml = canAddToCart
+      ? `
+        <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}')">
+          <i class="bi bi-bag-plus"></i> ${isIt ? '+ CARRELLO' : '+ ADD'}
+        </button>
+      `
+      : `
+        <button type="button" class="btn-card-action btn-card-cart disabled text-muted" style="cursor: not-allowed; opacity: 0.65;" title="${isRestaurant ? (isIt ? 'Ordini disabilitati per account ristoratore' : 'Ordering disabled for restaurant account') : (isIt ? 'Piatto non disponibile nei ristoranti' : 'Dish currently unavailable')}">
+          <i class="bi bi-slash-circle"></i> ${isIt ? 'NON DISP.' : 'UNAVAIL.'}
+        </button>
+      `;
 
     return `
       <div class="col-6 col-md-4 col-lg-3">
@@ -205,18 +226,10 @@ function renderMealsGrid(meals) {
           </div>
 
           <div class="card-action-group">
-            ${hasRest ? `
-              <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
-                <i class="bi bi-eye"></i> ${isIt ? 'VEDI' : 'VIEW'}
-              </button>
-              <button type="button" class="btn-card-action btn-card-cart" onclick="promptRestaurantSelection('${m._id}')">
-                <i class="bi bi-bag-plus"></i> ${isIt ? '+ CARRELLO' : '+ ADD'}
-              </button>
-            ` : `
-              <button type="button" class="btn-card-action btn-card-view w-100" style="border-right: none;" onclick="goToMealPage('${m._id}')">
-                <i class="bi bi-journal-bookmark"></i> ${isIt ? 'VEDI SCHEDA' : 'VIEW RECIPE'}
-              </button>
-            `}
+            <button type="button" class="btn-card-action btn-card-view" onclick="goToMealPage('${m._id}')">
+              <i class="bi bi-eye"></i> ${isIt ? 'VEDI' : 'VIEW'}
+            </button>
+            ${cartBtnHtml}
           </div>
         </div>
       </div>
@@ -225,7 +238,11 @@ function renderMealsGrid(meals) {
 }
 
 window.goToMealPage = function(mealId) {
-  window.location.href = `meal.html?id=${encodeURIComponent(mealId)}`;
+  let url = `meal.html?id=${encodeURIComponent(mealId)}`;
+  if (currentRestaurantFilter) {
+    url += `&restaurantId=${encodeURIComponent(currentRestaurantFilter)}`;
+  }
+  window.location.href = url;
 };
 
 function renderMinimalPagination(totalPages) {
@@ -291,6 +308,9 @@ window.resetRestaurantFilter = function() {
 };
 
 window.promptRestaurantSelection = function(mealId) {
+  const role = localStorage.getItem('userRole');
+  if (role === 'restaurant') return;
+
   const meal = rawMealsList.find(m => String(m._id) === String(mealId));
   if (!meal) return;
 
@@ -333,7 +353,8 @@ window.promptRestaurantSelection = function(mealId) {
 };
 
 window.confirmAddToCartWithRestaurant = function(restId, restName) {
-  if (!selectedMealForCart) return;
+  const role = localStorage.getItem('userRole');
+  if (role === 'restaurant' || !selectedMealForCart) return;
 
   const priceNum = Number(selectedMealForCart.price) || 8.50;
   let cart = JSON.parse(localStorage.getItem('cart')) || [];
