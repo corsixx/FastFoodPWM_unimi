@@ -3,70 +3,16 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-// Importazione dei modelli Mongoose per interagire con le collezioni Atlas
 const Order = require('../models/Order');
 const Meal = require('../models/Meal');
 const User = require('../models/User');
-
-// Middleware per estrarre e validare l'identità dell'utente dal token JWT
 const authMiddleware = require('../middleware/auth');
 
+const KITCHEN_CAPACITY = 2; // Numero di postazioni di cottura (macchine parallele)
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER & ROTTA 1: CREAZIONE ORDINE CON CALCOLO CODA + COTTURA
+// ROTTA 1: CREAZIONE ORDINE (Algoritmo Greedy List Scheduling)
 // ============================================================================
-/**
- * @swagger
- * /api/orders:
- *   post:
- *     summary: Invia un nuovo ordine con calcolo dinamico del tempo di attesa (Solo Clienti)
- *     description: Verifica i piatti nel carrello, congela i prezzi dal database per sicurezza, calcola il tempo basandosi sulla cottura del piatto più lento e sulla somma della coda reale del locale.
- *     tags: [Ordini]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - restaurantId
- *               - items
- *             properties:
- *               restaurantId:
- *                 type: string
- *                 example: 64a1b2c3d4e5f67890123456
- *               paymentMethod:
- *                 type: string
- *                 enum: [carta_credito, carta_prepagata, contanti]
- *                 example: carta_credito
- *               items:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - mealId
- *                     - quantity
- *                   properties:
- *                     mealId:
- *                       type: string
- *                       example: 64a1b2c3d4e5f67890123999
- *                     quantity:
- *                       type: number
- *                       example: 2
- *     responses:
- *       201:
- *         description: Ordine accettato e registrato nella coda del locale
- *       400:
- *         description: Dati carrello non validi o vuoti
- *       403:
- *         description: Accesso negato (solo i clienti possono ordinare)
- *       404:
- *         description: Ristorante o piatto non trovato
- */
-// routes/orders.js - Creazione Ordine con somma reale dei tempi di preparazione
-
 router.post('/', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'customer') {
@@ -88,6 +34,7 @@ router.post('/', authMiddleware, async (req, res) => {
     let maxDishPrepTime = 0;
     const orderItems = [];
 
+    // 1. Estrazione dati dal carrello
     for (const item of items) {
       const mealDoc = await Meal.findById(item.mealId);
       
@@ -116,27 +63,16 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-       // 1. Prendi tutti gli ordini NON ancora consegnati per questo locale, in ordine di arrivo
+    // 2. SIMULAZIONE CODA A MACCHINE PARALLELE
     const activeOrdersInQueue = await Order.find({
       restaurant: restaurantId,
       status: { $in: ['ordinato', 'in preparazione'] }
     }).sort({ createdAt: 1 }).populate('items.meal');
 
-    // 2. Numero di "postazioni cottura" parallele del locale.
-    //    Un ristorante vero non cucina un ordine alla volta: qui simuliamo
-    //    quante comande può preparare CONTEMPORANEAMENTE.
-    //    Se in futuro vuoi renderlo personalizzabile per ristorante,
-    //    aggiungi un campo kitchenCapacity al modello User (default 2)
-    //    e sostituisci il numero fisso con restaurant.kitchenCapacity || 2.
-    const KITCHEN_CAPACITY = 2;
-
-    // 3. Simulazione: ogni postazione tiene traccia di quando si libera.
-    //    Ogni ordine in coda viene assegnato alla postazione che si libera prima
-    //    (stesso principio dello scheduling "list scheduling" per il makespan).
-    const stationFreeAt = new Array(KITCHEN_CAPACITY).fill(0);
+    const stationLoads = new Array(KITCHEN_CAPACITY).fill(0);
 
     for (const activeOrder of activeOrdersInQueue) {
-      let activeOrderMaxPrep = 10; // Valore di default se non trova il piatto
+      let activeOrderMaxPrep = 10;
       if (Array.isArray(activeOrder.items)) {
         for (const it of activeOrder.items) {
           const prep = it.meal?.preparationTime || 10;
@@ -144,18 +80,19 @@ router.post('/', authMiddleware, async (req, res) => {
         }
       }
 
-      // Trova la postazione che si libera prima e assegnale questo ordine
-      let earliestIndex = 0;
-      for (let i = 1; i < stationFreeAt.length; i++) {
-        if (stationFreeAt[i] < stationFreeAt[earliestIndex]) earliestIndex = i;
+      // Trova la postazione con il carico minore (Greedy)
+      let minLoadIndex = 0;
+      for (let i = 1; i < KITCHEN_CAPACITY; i++) {
+        if (stationLoads[i] < stationLoads[minLoadIndex]) {
+          minLoadIndex = i;
+        }
       }
-      stationFreeAt[earliestIndex] += activeOrderMaxPrep;
+      // Assegna il lavoro alla postazione più scarica
+      stationLoads[minLoadIndex] += activeOrderMaxPrep;
     }
 
-    // 4. Il tuo ordine parte non appena la prima postazione libera è disponibile
-    const queueDelayMinutes = Math.min(...stationFreeAt);
-
-    // 5. Tempo totale: attesa in coda + tempo di cottura del tuo ordine
+    // Il ritardo della coda per il nuovo ordine è pari al carico della postazione che si libera per prima
+    const queueDelayMinutes = Math.min(...stationLoads);
     const totalEstimatedMinutes = queueDelayMinutes + maxDishPrepTime;
 
     const newOrder = new Order({
@@ -190,27 +127,77 @@ router.post('/', authMiddleware, async (req, res) => {
 
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER & ROTTA 2: STORICO ACQUISTI CLIENTE
+// ROTTA 2: STORICO ACQUISTI CLIENTE (Con ricalcolo dinamico)
 // ============================================================================
-/**
- * @swagger
- * /api/orders/my-orders:
- *   get:
- *     summary: Recupera lo storico di tutti gli ordini del cliente loggato
- *     tags: [Ordini]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Elenco degli ordini del cliente
- */
 router.get('/my-orders', authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ customer: req.user.id })
       .populate('restaurant', 'restaurantName restaurantAddress restaurantPhone')
-      .sort({ createdAt: -1 });
+      .populate('items.meal')
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.status(200).json(orders);
+    // Recupera TUTTI gli ordini attivi per ricalcolare la coda
+    const activeOrders = await Order.find({
+      status: { $in: ['ordinato', 'in preparazione'] }
+    }).sort({ createdAt: 1 }).populate('items.meal').lean();
+
+    const nowTime = Date.now();
+
+    const enrichedOrders = orders.map(ord => {
+      const status = (ord.status || '').toLowerCase().trim();
+
+      if (status === 'consegnato') {
+        ord.currentWaitMinutes = 0;
+        return ord;
+      }
+
+      // Tempo proprio di cottura
+      let myMaxPrep = 10;
+      if (Array.isArray(ord.items)) {
+        for (const it of ord.items) {
+          const pTime = it.meal?.preparationTime || 10;
+          if (pTime > myMaxPrep) myMaxPrep = pTime;
+        }
+      }
+
+      // Prendi SOLO gli ordini attivi dello stesso ristorante, ordinati PRIMA di questo
+      // (Se un ordine prima di questo è stato consegnato, non apparirà qui dentro!)
+      const ordersAhead = activeOrders.filter(ao => 
+        String(ao.restaurant) === String(ord.restaurant?._id || ord.restaurant) &&
+        new Date(ao.createdAt).getTime() < new Date(ord.createdAt).getTime()
+      );
+
+      // Riesegue l'algoritmo di scheduling per calcolare la coda residua
+      const stationLoads = new Array(KITCHEN_CAPACITY).fill(0);
+      for (const ahead of ordersAhead) {
+        let aheadPrep = 10;
+        if (Array.isArray(ahead.items)) {
+          for (const it of ahead.items) {
+            const p = it.meal?.preparationTime || 10;
+            if (p > aheadPrep) aheadPrep = p;
+          }
+        }
+        let minLoadIndex = 0;
+        for (let i = 1; i < KITCHEN_CAPACITY; i++) {
+          if (stationLoads[i] < stationLoads[minLoadIndex]) minLoadIndex = i;
+        }
+        stationLoads[minLoadIndex] += aheadPrep;
+      }
+
+      const queueDelay = Math.min(...stationLoads);
+      const dynamicTotal = queueDelay + myMaxPrep;
+
+      // Minuti trascorsi dalla creazione dell'ordine
+      const elapsedMinutes = Math.floor((nowTime - new Date(ord.createdAt).getTime()) / 60000);
+
+      // Tempo residuo = Tempo calcolato ricalcolando la coda - i minuti che hai già aspettato
+      ord.currentWaitMinutes = Math.max(1, dynamicTotal - elapsedMinutes);
+
+      return ord;
+    });
+
+    res.status(200).json(enrichedOrders);
   } catch (error) {
     res.status(500).json({ message: "Errore nel recupero dello storico acquisti.", error: error.message });
   }
@@ -218,22 +205,8 @@ router.get('/my-orders', authMiddleware, async (req, res) => {
 
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER & ROTTA 3: GESTIONALE COMANDE CUCINA (RISTORATORE)
+// ROTTA 3: GESTIONALE COMANDE CUCINA (RISTORATORE)
 // ============================================================================
-/**
- * @swagger
- * /api/orders/restaurant-orders:
- *   get:
- *     summary: Visualizza tutte le comande ricevute dalla cucina del ristorante
- *     tags: [Ordini]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Elenco ordini ricevuti
- *       403:
- *         description: Accesso consentito solo ai ristoratori
- */
 router.get('/restaurant-orders', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'restaurant') {
@@ -252,43 +225,8 @@ router.get('/restaurant-orders', authMiddleware, async (req, res) => {
 
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER & ROTTA 4: CAMBIO STATO MANUALE (RISTORATORE)
+// ROTTA 4: CAMBIO STATO MANUALE (RISTORATORE)
 // ============================================================================
-/**
- * @swagger
- * /api/orders/{id}/status:
- *   patch:
- *     summary: Avanza lo stato di preparazione/consegna dell'ordine
- *     description: Il ristoratore preme a schermo per passare da 'ordinato' a 'in preparazione' o 'consegnato'.
- *     tags: [Ordini]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID univoco dell'ordine
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [ordinato, in preparazione, in consegna, consegnato]
- *                 example: in preparazione
- *     responses:
- *       200:
- *         description: Stato dell'ordine aggiornato con successo
- *       404:
- *         description: Ordine non trovato o non appartenente al locale
- */
 router.patch('/:id/status', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'restaurant') {
@@ -319,23 +257,8 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
 
 
 // ============================================================================
-// DOCUMENTAZIONE SWAGGER & ROTTA 5: STATISTICHE RISTORANTE E CLASSIFICA CONCORRENZA
+// ROTTA 5: STATISTICHE RISTORANTE E CLASSIFICA
 // ============================================================================
-/**
- * @swagger
- * /api/orders/restaurant-stats:
- *   get:
- *     summary: Statistiche del ristorante con classifica e confronto rispetto agli altri locali
- *     description: Mostra incassi, piatti top del locale e la classifica generale delle vendite tra tutti i ristoranti della piattaforma.
- *     tags: [Ordini]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Statistiche e classifica di mercato calcolate con successo
- *       403:
- *         description: Accesso riservato ai ristoratori
- */
 router.get('/restaurant-stats', authMiddleware, async (req, res) => {
   try {
     if (req.user.role !== 'restaurant') {
@@ -344,14 +267,8 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
 
     const currentRestaurantId = new mongoose.Types.ObjectId(req.user.id);
 
-    // 1. Statistiche piatti venduti del proprio locale (Top Seller interni)
     const dishesStats = await Order.aggregate([
-      {
-        $match: {
-          restaurant: currentRestaurantId,
-          status: 'consegnato'
-        }
-      },
+      { $match: { restaurant: currentRestaurantId, status: 'consegnato' } },
       { $unwind: '$items' },
       {
         $group: {
@@ -363,14 +280,8 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
       { $sort: { totalQuantitySold: -1 } }
     ]);
 
-    // 2. Incasso totale e ordini conclusi del proprio locale
     const ownSummary = await Order.aggregate([
-      {
-        $match: {
-          restaurant: currentRestaurantId,
-          status: 'consegnato'
-        }
-      },
+      { $match: { restaurant: currentRestaurantId, status: 'consegnato' } },
       {
         $group: {
           _id: '$restaurant',
@@ -380,7 +291,6 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
       }
     ]);
 
-    // 3. Classifica e Benchmark rispetto a tutti gli altri ristoranti
     const leaderboard = await Order.aggregate([
       { $match: { status: 'consegnato' } },
       {
@@ -411,7 +321,6 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
       { $sort: { totalRevenue: -1 } }
     ]);
 
-    // 4. Posizione del proprio locale in classifica
     const myRankIndex = leaderboard.findIndex(item => item._id.toString() === currentRestaurantId.toString());
     const myRank = myRankIndex !== -1 ? myRankIndex + 1 : leaderboard.length + 1;
 

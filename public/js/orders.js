@@ -3,6 +3,7 @@
 let activeTab = 'history'; 
 let ordersList = [];
 let userProfile = null;
+let ordersPollingInterval = null;
 
 document.addEventListener('componentsLoaded', async () => {
   const token = localStorage.getItem('token');
@@ -33,8 +34,8 @@ document.addEventListener('componentsLoaded', async () => {
     document.getElementById('view-checkout')?.classList.add('d-none');
     document.getElementById('view-history')?.classList.remove('d-none');
     
-    document.getElementById('tab-btn-checkout').classList.replace('btn-outline-dark', 'btn-dark');
-    document.getElementById('tab-btn-history').classList.replace('btn-dark', 'btn-outline-dark');
+    document.getElementById('tab-btn-checkout')?.classList.replace('btn-outline-dark', 'btn-dark');
+    document.getElementById('tab-btn-history')?.classList.replace('btn-dark', 'btn-outline-dark');
 
   } else {
     await fetchUserProfile();
@@ -48,6 +49,16 @@ document.addEventListener('componentsLoaded', async () => {
   }
 
   await loadOrdersHistory();
+
+  // Polling automatico silenzioso ogni 5 secondi per aggiornare stati e tempi coda in tempo reale
+  if (ordersPollingInterval) clearInterval(ordersPollingInterval);
+  ordersPollingInterval = setInterval(async () => {
+    await loadOrdersHistory(true);
+  }, 5000);
+});
+
+window.addEventListener('beforeunload', () => {
+  if (ordersPollingInterval) clearInterval(ordersPollingInterval);
 });
 
 async function fetchUserProfile() {
@@ -83,28 +94,28 @@ window.switchOrdersTab = function(tabName) {
   if (role === 'restaurant') {
     if (tabName === 'checkout' || tabName === 'active') {
       activeTab = 'active';
-      btnCheckout.classList.replace('btn-outline-dark', 'btn-dark');
-      btnHistory.classList.replace('btn-dark', 'btn-outline-dark');
+      btnCheckout?.classList.replace('btn-outline-dark', 'btn-dark');
+      btnHistory?.classList.replace('btn-dark', 'btn-outline-dark');
     } else {
       activeTab = 'history';
-      btnHistory.classList.replace('btn-outline-dark', 'btn-dark');
-      btnCheckout.classList.replace('btn-dark', 'btn-outline-dark');
+      btnHistory?.classList.replace('btn-outline-dark', 'btn-dark');
+      btnCheckout?.classList.replace('btn-dark', 'btn-outline-dark');
     }
     renderHistoryView();
     return;
   }
 
   if (tabName === 'checkout') {
-    viewCheckout.classList.remove('d-none');
-    viewHistory.classList.add('d-none');
-    btnCheckout.classList.replace('btn-outline-dark', 'btn-dark');
-    btnHistory.classList.replace('btn-dark', 'btn-outline-dark');
+    viewCheckout?.classList.remove('d-none');
+    viewHistory?.classList.add('d-none');
+    btnCheckout?.classList.replace('btn-outline-dark', 'btn-dark');
+    btnHistory?.classList.replace('btn-dark', 'btn-outline-dark');
     renderCheckoutView();
   } else {
-    viewCheckout.classList.add('d-none');
-    viewHistory.classList.remove('d-none');
-    btnHistory.classList.replace('btn-outline-dark', 'btn-dark');
-    btnCheckout.classList.replace('btn-dark', 'btn-outline-dark');
+    viewCheckout?.classList.add('d-none');
+    viewHistory?.classList.remove('d-none');
+    btnHistory?.classList.replace('btn-outline-dark', 'btn-dark');
+    btnCheckout?.classList.replace('btn-dark', 'btn-outline-dark');
     renderHistoryView();
   }
 };
@@ -223,7 +234,7 @@ window.submitOrder = async function() {
       await loadOrdersHistory();
       switchOrdersTab('history');
       const waitTime = res.estimatedWaitTimeMinutes || 15;
-      alert(isIt ? `Ordine inviato! Tempo attesa stimato: ${waitTime} min.` : `Order sent! Est. wait: ${waitTime} min.`);
+      alert(isIt ? `Ordine inviato con successo!\nTempo stimato totale con coda: ${waitTime} min.` : `Order placed!\nTotal estimated wait with queue: ${waitTime} min.`);
     }
   } catch (err) {
     alert(isIt ? 'Errore invio: ' + err.message : 'Error: ' + err.message);
@@ -235,7 +246,7 @@ window.submitOrder = async function() {
   }
 };
 
-async function loadOrdersHistory() {
+async function loadOrdersHistory(isSilent = false) {
   try {
     const role = localStorage.getItem('userRole');
     const endpoint = (role === 'restaurant') ? '/orders/restaurant-orders' : '/orders/my-orders';
@@ -243,7 +254,7 @@ async function loadOrdersHistory() {
     ordersList = Array.isArray(data) ? data : (data.orders || []);
     renderHistoryView();
   } catch (err) {
-    console.error('Errore recupero storico ordini:', err);
+    if (!isSilent) console.error('Errore recupero storico ordini:', err);
   }
 }
 
@@ -255,7 +266,6 @@ function renderHistoryView() {
 
   if (!container) return;
 
-  // Filtraggio robusto per maiuscole/minuscole
   let displayList = ordersList;
   if (role === 'restaurant') {
     displayList = ordersList.filter(o => {
@@ -278,7 +288,7 @@ function renderHistoryView() {
       if (role === 'restaurant') {
         titleEl.textContent = isIt ? 'NESSUNA COMANDA' : 'NO ORDERS';
         subEl.textContent = activeTab === 'active' 
-          ? (isIt ? 'La cucina è vuota, ottimo lavoro!' : 'Kitchen is clear, great job!')
+          ? (isIt ? 'La cucina è libera!' : 'Kitchen is clear!')
           : (isIt ? 'Nessun ordine completato finora.' : 'No completed orders yet.');
         if (btnEl) btnEl.classList.add('d-none');
       } else {
@@ -311,6 +321,16 @@ function renderHistoryView() {
     if (status === 'consegnato') badgeClass = 'bg-success';
 
     const items = Array.isArray(order.items) ? order.items : [];
+    const isCompleted = status === 'consegnato';
+    
+    // Tempo ricalcolato dinamicamente dalla coda reale del backend
+    const waitVal = order.currentWaitMinutes !== undefined 
+      ? order.currentWaitMinutes 
+      : (order.estimatedWaitTimeMinutes || 15);
+
+    const waitDisplay = isCompleted 
+      ? (isIt ? 'RITIRATO AL BANCONE ✓' : 'PICKED UP ✓') 
+      : `${waitVal} min`;
 
     let actionButtons = '';
     
@@ -380,8 +400,10 @@ function renderHistoryView() {
             <div class="fw-bold small text-uppercase">${paymentLabel}</div>
           </div>
           <div class="col-12 col-md-4">
-            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">TEMPO STIMATO:</div>
-            <div class="fw-bold font-monospace">${order.estimatedWaitTimeMinutes || 15} min (Coda attiva)</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">${isCompleted ? 'STATO ATTUALE:' : 'TEMPO STIMATO:'}</div>
+            <div class="fw-bold font-monospace fs-6 ${isCompleted ? 'text-success' : 'text-danger'}">
+              ${waitDisplay}
+            </div>
           </div>
         </div>
 
@@ -415,7 +437,7 @@ window.updateOrderStatus = async function(orderId, newStatus) {
     });
 
     if (res) {
-      await loadOrdersHistory();
+      await loadOrdersHistory(true);
     }
   } catch (err) {
     console.error('Errore aggiornamento stato:', err);
