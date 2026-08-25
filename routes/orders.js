@@ -65,27 +65,25 @@ const authMiddleware = require('../middleware/auth');
  *       404:
  *         description: Ristorante o piatto non trovato
  */
+// routes/orders.js - Creazione Ordine con somma reale dei tempi di preparazione
+
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    // 1. Controllo di autorizzazione: solo i clienti registrati possono effettuare ordini
     if (req.user.role !== 'customer') {
       return res.status(403).json({ message: "Solo i clienti registrati possono effettuare ordini." });
     }
 
     const { restaurantId, items, paymentMethod } = req.body;
 
-    // 2. Controllo integrità del carrello
     if (!restaurantId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: "Il carrello deve contenere almeno un piatto valido." });
     }
 
-    // 3. Verifica esistenza del ristorante destinatario
     const restaurant = await User.findOne({ _id: restaurantId, role: 'restaurant' });
     if (!restaurant) {
       return res.status(404).json({ message: "Ristorante non trovato nel sistema." });
     }
 
-    // 4. Elaborazione carrello, congelamento prezzi e calcolo tempo di cottura del piatto più lento
     let calculatedTotal = 0;
     let maxDishPrepTime = 0;
     const orderItems = [];
@@ -118,20 +116,48 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
-    // 5. Calcolo sequenziale reale: somma i tempi stimati di tutti gli ordini precedenti non ancora completati
+       // 1. Prendi tutti gli ordini NON ancora consegnati per questo locale, in ordine di arrivo
     const activeOrdersInQueue = await Order.find({
       restaurant: restaurantId,
       status: { $in: ['ordinato', 'in preparazione'] }
-    });
+    }).sort({ createdAt: 1 }).populate('items.meal');
 
-    let queueDelayMinutes = 0;
+    // 2. Numero di "postazioni cottura" parallele del locale.
+    //    Un ristorante vero non cucina un ordine alla volta: qui simuliamo
+    //    quante comande può preparare CONTEMPORANEAMENTE.
+    //    Se in futuro vuoi renderlo personalizzabile per ristorante,
+    //    aggiungi un campo kitchenCapacity al modello User (default 2)
+    //    e sostituisci il numero fisso con restaurant.kitchenCapacity || 2.
+    const KITCHEN_CAPACITY = 2;
+
+    // 3. Simulazione: ogni postazione tiene traccia di quando si libera.
+    //    Ogni ordine in coda viene assegnato alla postazione che si libera prima
+    //    (stesso principio dello scheduling "list scheduling" per il makespan).
+    const stationFreeAt = new Array(KITCHEN_CAPACITY).fill(0);
+
     for (const activeOrder of activeOrdersInQueue) {
-      queueDelayMinutes += Number(activeOrder.estimatedWaitTimeMinutes) || 15;
+      let activeOrderMaxPrep = 10; // Valore di default se non trova il piatto
+      if (Array.isArray(activeOrder.items)) {
+        for (const it of activeOrder.items) {
+          const prep = it.meal?.preparationTime || 10;
+          if (prep > activeOrderMaxPrep) activeOrderMaxPrep = prep;
+        }
+      }
+
+      // Trova la postazione che si libera prima e assegnale questo ordine
+      let earliestIndex = 0;
+      for (let i = 1; i < stationFreeAt.length; i++) {
+        if (stationFreeAt[i] < stationFreeAt[earliestIndex]) earliestIndex = i;
+      }
+      stationFreeAt[earliestIndex] += activeOrderMaxPrep;
     }
 
-    const totalEstimatedMinutes = maxDishPrepTime + queueDelayMinutes;
+    // 4. Il tuo ordine parte non appena la prima postazione libera è disponibile
+    const queueDelayMinutes = Math.min(...stationFreeAt);
 
-    // 6. Creazione e salvataggio del documento ordine
+    // 5. Tempo totale: attesa in coda + tempo di cottura del tuo ordine
+    const totalEstimatedMinutes = queueDelayMinutes + maxDishPrepTime;
+
     const newOrder = new Order({
       customer: req.user.id,
       restaurant: restaurantId,
@@ -151,6 +177,7 @@ router.post('/', authMiddleware, async (req, res) => {
       breakdown: {
         cookingTime: maxDishPrepTime,
         queueDelay: queueDelayMinutes,
+        kitchenCapacity: KITCHEN_CAPACITY,
         activeOrdersCount: activeOrdersInQueue.length
       }
     });

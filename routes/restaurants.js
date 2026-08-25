@@ -79,7 +79,6 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id/menu', async (req, res) => {
   try {
-    // .populate('restaurantMenu') trasforma l'array di soli ID in oggetti piatto completi (nome, prezzo, foto)
     const restaurant = await User.findOne({ _id: req.params.id, role: 'restaurant' })
       .populate('restaurantMenu')
       .select('-password');
@@ -89,14 +88,13 @@ router.get('/:id/menu', async (req, res) => {
     }
 
     res.status(200).json({
+      _id: restaurant._id,               // <-- AGGIUNTO: senza questo il frontend perde l'id
       restaurantName: restaurant.restaurantName,
       restaurantAddress: restaurant.restaurantAddress,
+      restaurantPhone: restaurant.restaurantPhone,
+      IVAnumber: restaurant.IVAnumber,
       menu: restaurant.restaurantMenu
     });
-  } catch (error) {
-    res.status(500).json({ message: "Errore nel recupero del menu.", error: error.message });
-  }
-});
 
 
 // ******************************************************************************

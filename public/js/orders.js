@@ -1,4 +1,6 @@
-let activeTab = 'history';
+// public/js/orders.js
+
+let activeTab = 'history'; 
 let ordersList = [];
 let userProfile = null;
 
@@ -11,23 +13,31 @@ document.addEventListener('componentsLoaded', async () => {
     return;
   }
 
-  const tabGroup = document.getElementById('orders-tab-group');
   const viewBadge = document.getElementById('orders-view-badge');
   const viewTitle = document.getElementById('orders-view-title');
+  const btnCheckoutTxt = document.getElementById('txt-tab-checkout');
+  const btnHistoryTxt = document.getElementById('txt-tab-history');
+  const iconCheckout = document.querySelector('#tab-btn-checkout i');
   const isIt = currentLang === 'IT';
 
   if (role === 'restaurant') {
-    if (tabGroup) tabGroup.classList.add('d-none');
     if (viewBadge) viewBadge.textContent = isIt ? 'AREA GESTIONALE' : 'DASHBOARD';
-    if (viewTitle) viewTitle.textContent = isIt ? 'COMANDE IN CUCINA' : 'KITCHEN ORDERS';
+    if (viewTitle) viewTitle.textContent = isIt ? 'COMANDE & STORICO' : 'ORDERS & HISTORY';
     
-    activeTab = 'history';
+    if (btnCheckoutTxt) btnCheckoutTxt.textContent = isIt ? 'Comande in Corso' : 'Active Orders';
+    if (btnHistoryTxt) btnHistoryTxt.textContent = isIt ? 'Ordini Completati' : 'Completed Orders';
+    if (iconCheckout) iconCheckout.className = 'bi bi-fire me-1'; 
+    
+    activeTab = 'active'; 
+    
     document.getElementById('view-checkout')?.classList.add('d-none');
     document.getElementById('view-history')?.classList.remove('d-none');
-  } else {
-    // Carica il profilo utente per ottenere il metodo di pagamento predefinito
-    await fetchUserProfile();
+    
+    document.getElementById('tab-btn-checkout').classList.replace('btn-outline-dark', 'btn-dark');
+    document.getElementById('tab-btn-history').classList.replace('btn-dark', 'btn-outline-dark');
 
+  } else {
+    await fetchUserProfile();
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     if (cart.length > 0) {
       activeTab = 'checkout';
@@ -42,14 +52,13 @@ document.addEventListener('componentsLoaded', async () => {
 
 async function fetchUserProfile() {
   try {
-    const res = await apiRequest('/users/me');
+    const res = await apiRequest('/auth/me').catch(() => apiRequest('/users/me'));
     if (res && res.user) {
       userProfile = res.user;
     } else if (res) {
       userProfile = res;
     }
   } catch (err) {
-    console.warn('Profilo non caricato da API, fallback su localStorage:', err);
     userProfile = {
       preferredPaymentMethod: localStorage.getItem('userPaymentMethod') || 'carta_credito'
     };
@@ -57,31 +66,43 @@ async function fetchUserProfile() {
 }
 
 window.updateView = function() {
-  renderCheckoutView();
+  const role = localStorage.getItem('userRole');
+  if (role !== 'restaurant') renderCheckoutView();
   renderHistoryView();
 };
 
 window.switchOrdersTab = function(tabName) {
   const role = localStorage.getItem('userRole');
-  if (role === 'restaurant') return;
-
-  activeTab = tabName;
   const viewCheckout = document.getElementById('view-checkout');
   const viewHistory = document.getElementById('view-history');
   const btnCheckout = document.getElementById('tab-btn-checkout');
   const btnHistory = document.getElementById('tab-btn-history');
 
+  activeTab = tabName;
+
+  if (role === 'restaurant') {
+    if (tabName === 'checkout' || tabName === 'active') {
+      activeTab = 'active';
+      btnCheckout.classList.replace('btn-outline-dark', 'btn-dark');
+      btnHistory.classList.replace('btn-dark', 'btn-outline-dark');
+    } else {
+      activeTab = 'history';
+      btnHistory.classList.replace('btn-outline-dark', 'btn-dark');
+      btnCheckout.classList.replace('btn-dark', 'btn-outline-dark');
+    }
+    renderHistoryView();
+    return;
+  }
+
   if (tabName === 'checkout') {
     viewCheckout.classList.remove('d-none');
     viewHistory.classList.add('d-none');
-
     btnCheckout.classList.replace('btn-outline-dark', 'btn-dark');
     btnHistory.classList.replace('btn-dark', 'btn-outline-dark');
     renderCheckoutView();
   } else {
     viewCheckout.classList.add('d-none');
     viewHistory.classList.remove('d-none');
-
     btnHistory.classList.replace('btn-outline-dark', 'btn-dark');
     btnCheckout.classList.replace('btn-dark', 'btn-outline-dark');
     renderHistoryView();
@@ -106,11 +127,6 @@ function renderCheckoutView() {
       <div class="text-center py-5 text-muted small">
         <i class="bi bi-cart-x fs-2 d-block mb-2"></i>
         ${isIt ? 'Il carrello è attualmente vuoto.' : 'Your cart is currently empty.'}
-        <div class="mt-3">
-          <a href="catalog.html" class="btn btn-outline-dark btn-sm rounded-0 fw-bold text-uppercase">
-            ${isIt ? 'Sfoglia il catalogo' : 'Browse catalog'}
-          </a>
-        </div>
       </div>
     `;
     if (restNameEl) restNameEl.textContent = '---';
@@ -123,15 +139,10 @@ function renderCheckoutView() {
 
   if (submitBtn) submitBtn.disabled = false;
 
-  // Imposta il metodo di pagamento predefinito dal profilo utente
   if (paymentSelect && !paymentSelect.dataset.userModified) {
     const defaultMethod = userProfile?.preferredPaymentMethod || userProfile?.paymentMethod || 'carta_credito';
     paymentSelect.value = defaultMethod;
-    
-    // Evita di resettarlo se l'utente lo modifica manualmente durante la sessione
-    paymentSelect.addEventListener('change', () => {
-      paymentSelect.dataset.userModified = 'true';
-    }, { once: true });
+    paymentSelect.addEventListener('change', () => { paymentSelect.dataset.userModified = 'true'; }, { once: true });
   }
 
   const totalItems = cart.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
@@ -153,7 +164,7 @@ function renderCheckoutView() {
         <div class="flex-grow-1 text-truncate">
           <div class="fw-bold text-uppercase small text-truncate">${item.name}</div>
           <div class="text-muted" style="font-size: 0.75rem;">${item.restaurantName || ''}</div>
-          <div class="font-monospace fw-bold text-dark">€ ${(itemPrice * itemQty).toFixed(2)} <span class="text-muted small fw-normal">(${itemPrice.toFixed(2)} cad.)</span></div>
+          <div class="font-monospace fw-bold text-dark">€ ${(itemPrice * itemQty).toFixed(2)}</div>
         </div>
         <div class="d-flex align-items-center gap-1">
           <button type="button" class="btn btn-outline-dark btn-sm rounded-0 px-2 py-0 fw-bold" onclick="modifyCartQtyAndUpdate('${item.id}', '${item.restaurantId}', -1)">-</button>
@@ -179,57 +190,43 @@ window.submitOrder = async function() {
   const cart = JSON.parse(localStorage.getItem('cart') || '[]');
   const isIt = currentLang === 'IT';
 
-  if (cart.length === 0) {
-    alert(isIt ? 'Il carrello è vuoto!' : 'The cart is empty!');
-    return;
-  }
+  if (cart.length === 0) return;
 
   const firstRestId = cart[0].restaurantId;
   const hasMixedRestaurants = cart.some(item => item.restaurantId && item.restaurantId !== firstRestId);
   
   if (hasMixedRestaurants) {
-    alert(isIt ? 'Il carrello contiene piatti di ristoranti differenti. Svuota il carrello o ordina da un solo locale per volta.' : 'Cart contains items from different restaurants. Please order from a single restaurant at a time.');
+    alert(isIt ? 'Ordina da un solo locale per volta.' : 'Please order from a single restaurant at a time.');
     return;
   }
 
   const paymentSelect = document.getElementById('order-payment-method');
   const selectedPayment = paymentSelect ? paymentSelect.value : 'carta_credito';
-
   const submitBtn = document.getElementById('btn-submit-order');
-  const restId = cart[0].restaurantId;
-  const itemsPayload = cart.map(i => ({
-    mealId: i.id,
-    quantity: Number(i.quantity) || 1
-  }));
 
   const payload = {
-    restaurantId: restId,
+    restaurantId: firstRestId,
     paymentMethod: selectedPayment,
-    items: itemsPayload
+    items: cart.map(i => ({ mealId: i.id, quantity: Number(i.quantity) || 1 }))
   };
 
   try {
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>${isIt ? 'INOLTRO IN CORSO...' : 'SUBMITTING...'}</span> <div class="spinner-border spinner-border-sm"></div>`;
+      submitBtn.innerHTML = `<span>${isIt ? 'INOLTRO...' : 'SUBMITTING...'}</span> <div class="spinner-border spinner-border-sm"></div>`;
     }
 
-    const res = await apiRequest('/orders', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
+    const res = await apiRequest('/orders', { method: 'POST', body: JSON.stringify(payload) });
 
     if (res) {
       clearCart();
       await loadOrdersHistory();
       switchOrdersTab('history');
-      
       const waitTime = res.estimatedWaitTimeMinutes || 15;
-      alert(isIt ? `Ordine inviato con successo! Tempo stimato di attesa: ${waitTime} min.` : `Order submitted! Estimated wait time: ${waitTime} min.`);
+      alert(isIt ? `Ordine inviato! Tempo attesa stimato: ${waitTime} min.` : `Order sent! Est. wait: ${waitTime} min.`);
     }
   } catch (err) {
-    console.error('Errore durante l\'invio ordine:', err);
-    alert(isIt ? 'Errore durante l\'invio dell\'ordine: ' + err.message : 'Error submitting order: ' + err.message);
+    alert(isIt ? 'Errore invio: ' + err.message : 'Error: ' + err.message);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -242,7 +239,6 @@ async function loadOrdersHistory() {
   try {
     const role = localStorage.getItem('userRole');
     const endpoint = (role === 'restaurant') ? '/orders/restaurant-orders' : '/orders/my-orders';
-    
     const data = await apiRequest(endpoint);
     ordersList = Array.isArray(data) ? data : (data.orders || []);
     renderHistoryView();
@@ -259,22 +255,51 @@ function renderHistoryView() {
 
   if (!container) return;
 
-  if (ordersList.length === 0) {
-    if (noOrdersMsg) noOrdersMsg.classList.remove('d-none');
+  // Filtraggio robusto per maiuscole/minuscole
+  let displayList = ordersList;
+  if (role === 'restaurant') {
+    displayList = ordersList.filter(o => {
+      const currentStatus = (o.status || '').toLowerCase().trim();
+      if (activeTab === 'active') {
+        return currentStatus !== 'consegnato';
+      } else {
+        return currentStatus === 'consegnato';
+      }
+    });
+  }
+
+  if (displayList.length === 0) {
+    if (noOrdersMsg) {
+      noOrdersMsg.classList.remove('d-none');
+      const titleEl = document.getElementById('txt-no-orders-title');
+      const subEl = document.getElementById('txt-no-orders-sub');
+      const btnEl = document.getElementById('txt-no-orders-btn');
+      
+      if (role === 'restaurant') {
+        titleEl.textContent = isIt ? 'NESSUNA COMANDA' : 'NO ORDERS';
+        subEl.textContent = activeTab === 'active' 
+          ? (isIt ? 'La cucina è vuota, ottimo lavoro!' : 'Kitchen is clear, great job!')
+          : (isIt ? 'Nessun ordine completato finora.' : 'No completed orders yet.');
+        if (btnEl) btnEl.classList.add('d-none');
+      } else {
+        titleEl.textContent = isIt ? 'NESSUN ORDINE TROVATO' : 'NO ORDERS FOUND';
+        subEl.textContent = isIt ? 'Non hai ancora effettuato nessun ordine.' : 'You haven\'t placed any orders yet.';
+        if (btnEl) btnEl.classList.remove('d-none');
+      }
+    }
     container.innerHTML = '';
     return;
   }
 
   if (noOrdersMsg) noOrdersMsg.classList.add('d-none');
 
-  container.innerHTML = ordersList.map(order => {
+  container.innerHTML = displayList.map(order => {
     const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleString(isIt ? 'it-IT' : 'en-GB') : '---';
     const total = (Number(order.totalAmount) || 0).toFixed(2);
-    const status = (order.status || 'ordinato').toLowerCase();
+    const status = (order.status || 'ordinato').toLowerCase().trim();
     const restName = order.restaurant?.restaurantName || order.restaurant?.name || 'Ristorante Partner';
     const customerName = order.customer ? `${order.customer.name || ''} ${order.customer.surname || ''}`.trim() || order.customer.email : 'Cliente';
 
-    // Formattazione label Metodo di Pagamento nello storico
     let paymentLabel = '💳 Carta di Credito';
     if (order.paymentMethod === 'carta_prepagata') paymentLabel = '💳 Carta Prepagata';
     if (order.paymentMethod === 'contanti') paymentLabel = '💵 Contanti al Ritiro';
@@ -294,7 +319,7 @@ function renderHistoryView() {
         actionButtons = `
           <div class="border-top pt-3 mt-3 d-flex justify-content-end align-items-center">
             <button type="button" class="btn btn-outline-primary btn-sm rounded-0 fw-bold text-uppercase" onclick="updateOrderStatus('${order._id}', 'in preparazione')">
-              Inizia Cottura (Metti in Preparazione) 👨‍🍳
+              Inizia Cottura (In Prep.) 👨‍🍳
             </button>
           </div>
         `;
@@ -302,7 +327,7 @@ function renderHistoryView() {
         actionButtons = `
           <div class="border-top pt-3 mt-3 d-flex justify-content-end align-items-center gap-2">
             <button type="button" class="btn btn-success btn-sm rounded-0 fw-bold text-uppercase text-white" onclick="updateOrderStatus('${order._id}', 'consegnato')">
-              Segna come Pronto / Consegnato (Rimuovi dalla coda) ✓
+              Segna come Consegnato ✓
             </button>
           </div>
         `;
@@ -310,14 +335,14 @@ function renderHistoryView() {
         actionButtons = `
           <div class="border-top pt-3 mt-3 d-flex justify-content-between align-items-center">
             <span class="small text-muted text-uppercase">Stato Ordine:</span>
-            <span class="badge bg-success rounded-0 text-uppercase">Consegnato e Concluso</span>
+            <span class="badge bg-success rounded-0 text-uppercase">Completato e Chiuso</span>
           </div>
         `;
       }
     } else {
       let statusText = isIt ? 'In attesa di lavorazione' : 'Waiting for processing';
       if (status === 'in preparazione') statusText = isIt ? 'La cucina sta preparando i piatti' : 'Kitchen is preparing dishes';
-      if (status === 'in consegna') statusText = isIt ? 'Ordine pronto al bancone per il ritiro!' : 'Order ready at counter for pickup!';
+      if (status === 'in consegna') statusText = isIt ? 'Ordine pronto al bancone!' : 'Order ready at counter!';
       if (status === 'consegnato') statusText = isIt ? 'Ordine ritirato e concluso' : 'Order picked up and completed';
 
       actionButtons = `
@@ -351,11 +376,11 @@ function renderHistoryView() {
             <div class="fw-bold text-uppercase">${role === 'restaurant' ? customerName : restName}</div>
           </div>
           <div class="col-12 col-md-4">
-            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">METODO DI PAGAMENTO:</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">METODO PAGAMENTO:</div>
             <div class="fw-bold small text-uppercase">${paymentLabel}</div>
           </div>
           <div class="col-12 col-md-4">
-            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">TEMPO STIMATO DI ATTESA:</div>
+            <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">TEMPO STIMATO:</div>
             <div class="fw-bold font-monospace">${order.estimatedWaitTimeMinutes || 15} min (Coda attiva)</div>
           </div>
         </div>
@@ -393,7 +418,7 @@ window.updateOrderStatus = async function(orderId, newStatus) {
       await loadOrdersHistory();
     }
   } catch (err) {
-    console.error('Errore aggiornamento stato ordine:', err);
-    alert('Impossibile aggiornare lo stato dell\'ordine: ' + err.message);
+    console.error('Errore aggiornamento stato:', err);
+    alert('Impossibile aggiornare lo stato: ' + err.message);
   }
 };
