@@ -3,125 +3,96 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastFood // Dashboard Statistiche Locale</title>
+    <title>FastFood // Dashboard Statistiche & Vendite</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <!-- Chart.js per i grafici -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/style.css">
   </head>
   <body>
 
-    <!-- 1. TOP ANNOUNCEMENT BAR -->
-    <div class="top-bar text-center" id="txt-announcement">
-      Supporto in Chat 24/7 &bull; Ordini al Bancone & Asporto Rapido
-    </div>
+    <!-- Header Iniettato da utils.js -->
+    <div id="app-header"></div>
 
-    <!-- 2. HEADER -->
-    <header class="main-header">
-      <div class="container-fluid px-3 px-md-4 py-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <a href="index.html" class="brand-logo">FastFood</a>
-          </div>
-
-          <div class="d-flex align-items-center gap-3">
-            <!-- Pulsante Lingua -->
-            <button class="lang-switch-btn" id="lang-btn" onclick="toggleLanguage()">
-              IT 🇮🇹
-            </button>
-
-            <!-- Menu Hamburger -->
-            <button class="btn p-0 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenuDrawer">
-              <i class="bi bi-list fs-4"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- 3. CONTENUTO DASHBOARD STATISTICHE -->
-    <main class="container py-4 py-md-5" style="min-height: 70vh;">
+    <!-- CONTENUTO DASHBOARD -->
+    <main class="container-fluid px-3 px-md-4 py-5" style="max-width: 1400px; min-height: 75vh;">
       
-      <!-- INTESTAZIONE GESTIONALE CON TASTO RAPIDO MENU -->
+      <!-- INTESTAZIONE GESTIONALE -->
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 border-bottom pb-4 mb-4">
         <div>
           <div class="d-flex align-items-center gap-2 mb-1">
-            <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" id="txt-badge-stats">GESTIONALE LOCALE</span>
-            <span class="badge bg-success rounded-0 text-uppercase py-1 px-2" id="txt-badge-live">LIVE</span>
+            <span class="badge bg-black rounded-0 text-uppercase py-1 px-2" id="txt-badge-stats">PANNELLO DI CONTROLLO</span>
+            <span class="badge bg-success rounded-0 text-uppercase py-1 px-2">LIVE METRICS</span>
           </div>
           <h2 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em;" id="restaurant-name-header">
             DASHBOARD RISTORANTE
           </h2>
-          <div class="small text-muted" id="restaurant-addr-header">Caricamento dati sede...</div>
+          <div class="small text-muted" id="restaurant-addr-header">Caricamento dati del locale...</div>
         </div>
 
-        <!-- Pulsanti di Azione Rapida -->
+        <!-- Azioni Rapide -->
         <div class="d-flex gap-2 flex-wrap">
           <a href="manageMenu.html" class="btn btn-dark rounded-0 fw-bold small text-uppercase py-2 px-3">
-            <i class="bi bi-card-checklist me-1"></i> GESTISCI MENU &rarr;
+            <i class="bi bi-card-checklist me-1"></i> GESTISCI MENU
           </a>
-          <button class="btn btn-outline-dark rounded-0 fw-bold small text-uppercase py-2 px-3" onclick="loadRestaurantStats()">
-            <i class="bi bi-arrow-clockwise me-1"></i> <span id="txt-btn-refresh">AGGIORNA</span>
+          <a href="orders.html" class="btn btn-outline-dark rounded-0 fw-bold small text-uppercase py-2 px-3">
+            <i class="bi bi-fire me-1"></i> COMANDE IN CORSO
+          </a>
+          <button type="button" class="btn btn-outline-secondary rounded-0 fw-bold small text-uppercase py-2 px-3" onclick="loadRestaurantStats()">
+            <i class="bi bi-arrow-clockwise me-1"></i> AGGIORNA
           </button>
-          <a href="catalog.html" class="btn btn-outline-secondary rounded-0 fw-bold small text-uppercase py-2 px-3" id="txt-btn-viewmenu">
-            MENU PUBBLICO
-          </a>
         </div>
       </div>
 
-      <!-- SCHEDE KPI (Metriche chiave) -->
+      <!-- SCHEDE KPI -->
       <div class="row g-3 mb-4">
-        <!-- Incasso Totale -->
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="border border-dark p-3 bg-white h-100">
-            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;" id="txt-kpi-revenue">Incasso Totale</div>
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Incasso Totale</div>
             <div class="fs-3 fw-bold font-monospace mb-1" id="kpi-revenue-val">€ 0.00</div>
-            <div class="small text-muted" style="font-size: 0.7rem;" id="txt-kpi-revenue-sub">Ordini completati</div>
+            <div class="small text-muted" style="font-size: 0.7rem;">Ordini consegnati</div>
           </div>
         </div>
 
-        <!-- Ordini Totali -->
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="border border-dark p-3 bg-white h-100">
-            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;" id="txt-kpi-orders">Ordini Ricevuti</div>
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Ordini Ricevuti</div>
             <div class="fs-3 fw-bold font-monospace mb-1" id="kpi-orders-val">0</div>
-            <div class="small text-muted" style="font-size: 0.7rem;" id="txt-kpi-orders-sub">Storico complessivo</div>
+            <div class="small text-muted" style="font-size: 0.7rem;">Storico complessivo</div>
           </div>
         </div>
 
-        <!-- Piatti a Menu -->
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-lg-3">
           <div class="border border-dark p-3 bg-white h-100">
-            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;" id="txt-kpi-meals">Piatti Attivi</div>
-            <div class="fs-3 fw-bold font-monospace mb-1" id="kpi-meals-val">0</div>
-            <div class="small text-muted" style="font-size: 0.7rem;" id="txt-kpi-meals-sub">Nel catalogo del locale</div>
-          </div>
-        </div>
-
-        <!-- Ordini in Attesa -->
-        <div class="col-6 col-md-3">
-          <div class="border border-dark p-3 bg-white h-100">
-            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;" id="txt-kpi-pending">In Preparazione</div>
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Comande Attive</div>
             <div class="fs-3 fw-bold font-monospace mb-1 text-warning" id="kpi-pending-val">0</div>
-            <div class="small text-muted" style="font-size: 0.7rem;" id="txt-kpi-pending-sub">Da consegnare al banco</div>
+            <div class="small text-muted" style="font-size: 0.7rem;">In attesa o in cottura</div>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+          <div class="border border-dark p-3 bg-white h-100">
+            <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Posizione Piattaforma</div>
+            <div class="fs-4 fw-bold font-monospace mb-1 text-primary text-truncate" id="kpi-rank-val">---</div>
+            <div class="small text-muted" style="font-size: 0.7rem;">Classifica vendite network</div>
           </div>
         </div>
       </div>
 
       <!-- GRAFICI DI PERFORMANCE -->
       <div class="row g-4 mb-4">
-        <!-- Grafico Andamento Incassi -->
+        <!-- Grafico Vendite -->
         <div class="col-12 col-lg-8">
           <div class="border border-dark p-4 bg-white h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;" id="txt-chart-revenue-title">
-                ANDAMENTO VENDITE SETTIMANALI (€)
+              <h6 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;">
+                ANDAMENTO INCASSI GIORNALIERI (€)
               </h6>
-              <span class="small text-muted font-monospace" id="txt-chart-days">ULTIMI 7 GIORNI</span>
+              <span class="small text-muted font-monospace">ULTIMI 7 GIORNI</span>
             </div>
             <div style="position: relative; height: 280px; width: 100%;">
               <canvas id="revenueChart"></canvas>
@@ -129,44 +100,50 @@
           </div>
         </div>
 
-        <!-- Grafico Distribuzione per Categoria -->
+        <!-- Grafico Top Piatti -->
         <div class="col-12 col-lg-4">
           <div class="border border-dark p-4 bg-white h-100">
-            <h6 class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;" id="txt-chart-cat-title">
-              PIATTI PIÙ ORDINATI PER CATEGORIA
+            <h6 class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
+              TOP PIATTI PIÙ VENDUTI
             </h6>
             <div style="position: relative; height: 280px; width: 100%;">
-              <canvas id="categoryChart"></canvas>
+              <canvas id="topDishesChart"></canvas>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TABELLA ULTIMI ORDINI RICEVUTI -->
+      <!-- TABELLA ULTIMI ORDINI CON AZIONE STATO RAPIDA -->
       <div class="border border-dark p-4 bg-white">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;" id="txt-recent-orders-title">
-            ULTIMI ORDINI AL BANCONE
-          </h6>
-          <span class="small text-muted" id="orders-count-badge">0 ordini trovati</span>
+          <div>
+            <h6 class="fw-bold text-uppercase m-0" style="font-family: 'Space Grotesk', sans-serif;">
+              ULTIMI ORDINI RICEVUTI AL BANCONE
+            </h6>
+            <span class="small text-muted" id="orders-count-badge">Caricamento ordini...</span>
+          </div>
+          <a href="orders.html" class="btn btn-outline-dark btn-sm rounded-0 fw-bold text-uppercase px-3">
+            Vedi Tutti &rarr;
+          </a>
         </div>
 
         <div class="table-responsive">
           <table class="table table-bordered align-middle mb-0" style="font-size: 0.85rem;">
-            <thead class="table-dark text-uppercase" style="font-family: 'Space Grotesk', sans-serif;">
+            <thead class="table-dark text-uppercase font-monospace">
               <tr>
-                <th id="th-order-id">ID Ordine</th>
-                <th id="th-order-date">Data & Ora</th>
-                <th id="th-order-customer">Cliente</th>
-                <th id="th-order-items">Piatti / Dettaglio</th>
-                <th id="th-order-total">Totale</th>
-                <th id="th-order-status">Stato</th>
+                <th>ID Ordine</th>
+                <th>Data & Ora</th>
+                <th>Cliente</th>
+                <th>Piatti Ordinati</th>
+                <th>Totale</th>
+                <th>Stato Attuale</th>
+                <th class="text-center">Azione Rapida</th>
               </tr>
             </thead>
             <tbody id="stats-orders-tbody">
               <tr>
-                <td colspan="6" class="text-center py-4 text-muted" id="txt-no-orders-yet">
-                  Nessun ordine ricevuto al momento.
+                <td colspan="7" class="text-center py-4 text-muted">
+                  <div class="spinner-border spinner-border-sm me-2"></div>Caricamento ordini in corso...
                 </td>
               </tr>
             </tbody>
@@ -176,86 +153,15 @@
 
     </main>
 
-    <!-- 4. FOOTER -->
-    <main-footer>
-      <footer class="main-footer mt-5">
-        <div class="container-fluid px-3 px-md-4">
-          <div class="row g-4">
-            <div class="col-6 col-md-3">
-              <div class="footer-title" id="txt-f-service">SERVIZIO</div>
-              <a href="#" class="footer-link" data-bs-toggle="modal" data-bs-target="#modalInfo">Come Ordinare</a>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="footer-title" id="txt-f-partner">PARTNER</div>
-              <a href="register.html" class="footer-link">Diventa un Ristorante Partner</a>
-              <a href="login.html" class="footer-link">Accedi al Gestionale</a>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="footer-title" id="txt-f-support">SUPPORTO</div>
-              <span class="footer-link text-muted">Chat 24/7 Attiva</span>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="footer-title" id="txt-f-legal">LEGAL</div>
-              <span class="footer-link text-muted mt-2">&copy; 2026 FastFood Network</span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </main-footer>
-
-    <!-- MODALI -->
-    <div class="modal fade" id="modalInfo" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-0 border-dark">
-          <div class="modal-header border-bottom">
-            <h6 class="modal-title fw-bold text-uppercase">Informazioni Servizio</h6>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body small text-muted">
-            Scegli i piatti dal menu, inoltra l'ordine e ritira direttamente al punto cassa senza code.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. OFFCANVAS DRAWER DINAMICO -->
-    <div class="offcanvas offcanvas-end offcanvas-5mc2" tabindex="-1" id="sideMenuDrawer">
-      <div class="offcanvas-header justify-content-end pb-0">
-        <button type="button" class="btn-close text-reset shadow-none" data-bs-dismiss="offcanvas"></button>
-      </div>
-      <div class="offcanvas-body d-flex flex-column justify-content-between pt-0">
-        <div id="drawer-nav-container">
-          <!-- Popolato dinamicamente dallo script in base al ruolo -->
-        </div>
-        <div class="border-top pt-3 mt-4" id="drawer-user-section"></div>
-      </div>
-    </div>
+    <!-- Componenti Comuni Iniettati da utils.js -->
+    <div id="app-footer"></div>
+    <div id="app-drawer"></div>
+    <div id="app-modals"></div>
 
     <!-- Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/stats.js"></script>
-    <script>
-      // Script inline per adattare il menu laterale (drawer) al ruolo dell'utente loggato
-      document.addEventListener('DOMContentLoaded', () => {
-        const role = localStorage.getItem('userRole');
-        const navContainer = document.getElementById('drawer-nav-container');
-        if (!navContainer) return;
-
-        if (role === 'restaurant') {
-          navContainer.innerHTML = `
-            <a href="manageMenu.html" class="drawer-nav-item"><i class="bi bi-card-checklist me-2"></i><span>GESTIONE MENU</span> <i class="bi bi-chevron-right small"></i></a>
-            <a href="stats.html" class="drawer-nav-item active"><i class="bi bi-graph-up me-2"></i><span>STATISTICHE LOCALE</span> <i class="bi bi-chevron-right small"></i></a>
-            <a href="restaurantCatalog.html" class="drawer-nav-item"><i class="bi bi-shop me-2"></i><span>I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
-          `;
-        } else {
-          navContainer.innerHTML = `
-            <a href="catalog.html" class="drawer-nav-item"><span>CATALOGO COMPLETO</span> <i class="bi bi-chevron-right small"></i></a>
-            <a href="restaurantCatalog.html" class="drawer-nav-item"><span>I NOSTRI RISTORANTI</span> <i class="bi bi-chevron-right small"></i></a>
-            <a href="orders.html" class="drawer-nav-item"><span>I MIEI ORDINI</span> <i class="bi bi-chevron-right small"></i></a>
-          `;
-        }
-      });
-    </script>
   </body>
 </html>
