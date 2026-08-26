@@ -69,7 +69,7 @@ const authMiddleware = require('../middleware/auth');
  *       201:
  *         description: Utente creato con successo
  *       400:
- *         description: Campi obbligatori mancanti o email già registrata
+ *         description: Campi obbligatori mancanti, formato non valido o email già registrata
  *       500:
  *         description: Errore interno del server
  */
@@ -89,33 +89,60 @@ router.post('/register', async (req, res) => {
       IVAnumber 
     } = req.body;
 
+    // 1. Controllo campi obbligatori
     if (!name || !email || !password) {
       return res.status(400).json({ 
         message: 'Tutti i campi obbligatori (name, email, password) devono essere compilati.' 
       });
     }
 
+    // 2. Controllo nome non vuoto
+    const trimmedName = name.trim();
+    if (trimmedName === '') {
+      return res.status(400).json({ message: 'Il nome non può essere vuoto o contenere solo spazi.' });
+    }
+
+    // 3. Controllo sintassi email
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const normalizedEmail = email.toLowerCase().trim();
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ 
+        message: 'Formato email non valido. Esempio corretto: nome@dominio.com' 
+      });
+    }
+
+    // 4. Controllo lunghezza password
+    if (typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ 
+        message: 'La password deve contenere almeno 6 caratteri.' 
+      });
+    }
+
+    // 5. Unicità email
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'Email già presente nel sistema.' });
     }
 
+    // 6. Ruolo (incluso admin)
+    const validRoles = ['customer', 'restaurant', 'admin'];
+    const assignedRole = role && validRoles.includes(role) ? role : 'customer';
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      name: name.trim(),
+      name: trimmedName,
       surname: surname ? surname.trim() : '',
       email: normalizedEmail,
       password: hashedPassword,
-      role: role || 'customer',
+      role: assignedRole,
       favoriteCategory: favoriteCategory || null,
       paymentMethod: paymentMethod || 'carta_credito',
-      restaurantName: role === 'restaurant' ? (restaurantName || name) : undefined,
-      restaurantAddress: role === 'restaurant' ? (restaurantAddress || 'Via Roma 10, Milano') : undefined,
-      restaurantPhone: role === 'restaurant' ? (restaurantPhone || '') : undefined,
-      IVAnumber: role === 'restaurant' ? (IVAnumber || '') : undefined
+      restaurantName: assignedRole === 'restaurant' ? (restaurantName ? restaurantName.trim() : trimmedName) : undefined,
+      restaurantAddress: assignedRole === 'restaurant' ? (restaurantAddress ? restaurantAddress.trim() : 'Via Roma 10, Milano') : undefined,
+      restaurantPhone: assignedRole === 'restaurant' ? (restaurantPhone ? restaurantPhone.trim() : '') : undefined,
+      IVAnumber: assignedRole === 'restaurant' ? (IVAnumber ? IVAnumber.trim() : '') : undefined
     });
 
     await newUser.save();
@@ -140,7 +167,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Errore interno del server.', error: error.message });
   }
 });
-
 // ============================================================================
 // ROTTA 2: LOGIN UTENTE (POST /api/auth/login)
 // ============================================================================
