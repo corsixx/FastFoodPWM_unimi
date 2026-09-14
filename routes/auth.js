@@ -97,7 +97,7 @@ router.post('/register', async (req, res) => {
     }
 
     // 2. Controllo nome non vuoto
-    const trimmedName = name.trim();
+    const trimmedName = name.trim();  // Rimuove spazi iniziali e finali, SE UN UTENTE INSERISCE SOLO SPAZI, IL TRIMMEDNAME SARA' VUOTO
     if (trimmedName === '') {
       return res.status(400).json({ message: 'Il nome non può essere vuoto o contenere solo spazi.' });
     }
@@ -119,17 +119,17 @@ router.post('/register', async (req, res) => {
     }
 
     // 5. Unicità email
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const existingUser = await User.findOne({ email: normalizedEmail });  //await aspetta la risposta della query al database
     if (existingUser) {
       return res.status(400).json({ message: 'Email già presente nel sistema.' });
     }
 
     // 6. Ruolo (incluso admin)
     const validRoles = ['customer', 'restaurant', 'admin'];
-    const assignedRole = role && validRoles.includes(role) ? role : 'customer';
+    const assignedRole = role && validRoles.includes(role) ? role : 'customer'; //controlla se "role" è definito e se è uno dei ruoli validi, altrimenti assegna "customer"
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = await bcrypt.genSalt(10);  // Genera un salt per la cifratura della password
+    const hashedPassword = await bcrypt.hash(password, salt); // Cifra la password con il salt generato
 
     const newUser = new User({
       name: trimmedName,
@@ -139,7 +139,7 @@ router.post('/register', async (req, res) => {
       role: assignedRole,
       favoriteCategory: favoriteCategory || null,
       paymentMethod: paymentMethod || 'carta_credito',
-      restaurantName: assignedRole === 'restaurant' ? (restaurantName ? restaurantName.trim() : trimmedName) : undefined,
+      restaurantName: assignedRole === 'restaurant' ? (restaurantName ? restaurantName.trim() : trimmedName) : undefined, // Se il ruolo è "restaurant", assegna il nome del ristorante o il nome dell'utente come default oppure undefined se non è un ristorante
       restaurantAddress: assignedRole === 'restaurant' ? (restaurantAddress ? restaurantAddress.trim() : 'Via Roma 10, Milano') : undefined,
       restaurantPhone: assignedRole === 'restaurant' ? (restaurantPhone ? restaurantPhone.trim() : '') : undefined,
       IVAnumber: assignedRole === 'restaurant' ? (IVAnumber ? IVAnumber.trim() : '') : undefined
@@ -160,6 +160,7 @@ router.post('/register', async (req, res) => {
         favoriteCategory: newUser.favoriteCategory,
         paymentMethod: newUser.paymentMethod
       }
+      //passworrd non viene restituita per motivi di sicurezza
     });
 
   } catch (error) {
@@ -218,10 +219,12 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: 'Credenziali non valide.' });
     }
+    //prende la password in chiaro digitata ora dall'utente, estrae il sale dall'hash salvato nel database (user.password), 
+    // ricalcola l'hash e verifica se coincidono. Restituisce true se corretta, false se errata.
 
     const token = jwt.sign(
-      { id: user._id, role: user.role, name: user.name, restaurantName: user.restaurantName },
-      process.env.JWT_SECRET || 'supersecretkey12345',
+      { id: user._id, role: user.role, name: user.name, restaurantName: user.restaurantName },  //payload del token, contiene informazioni utili per l'autenticazione e autorizzazione dell'utente
+      process.env.JWT_SECRET || 'supersecretkey12345',  //chiave segreta per firmare il token, deve essere lunga e complessa, meglio se in variabile d'ambiente
       { expiresIn: '24h' }
     );
 
@@ -265,8 +268,10 @@ router.post('/login', async (req, res) => {
  *         description: Utente non trovato
  */
 router.get('/me', authMiddleware, async (req, res) => {
+  //authMiddleware verifica il token JWT e aggiunge l'ID dell'utente a req.user.id
   try {
     const user = await User.findById(req.user.id).select('-password');
+    // Seleziona tutti i campi tranne la password per motivi di sicurezza
 
     if (!user) {
       return res.status(404).json({ message: "Utente non trovato." });
@@ -330,7 +335,8 @@ router.put('/me', authMiddleware, async (req, res) => {
       restaurantAddress, 
       restaurantPhone, 
       IVAnumber 
-    } = req.body;
+    } = req.body; //i cammpi nel req.body estratti sono i dati che il client ha aggiornato e inviato al server
+    //al massimo quelli che  il client non ha aggiornato sono gli stessi valori già presenti nel database, quindi non ci sono problemi a sovrascrivere i campi con gli stessi valori
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
@@ -346,7 +352,7 @@ router.put('/me', authMiddleware, async (req, res) => {
           IVAnumber 
         } 
       },
-      { returnDocument: 'after', runValidators: true }
+      { returnDocument: 'after', runValidators: true }  //ritorna il documento aggiornato e applica le validazioni definite nello schema Mongoose
     ).select('-password');
 
     if (!updatedUser) {
@@ -384,9 +390,9 @@ router.delete('/me', authMiddleware, async (req, res) => {
   try {
     if (req.user.role === 'restaurant') {
       await Meal.deleteMany({ restaurantId: req.user.id });
-    }
+    } // Elimina tutti i piatti associati al ristorante prima di eliminare l'account del ristorante
 
-    const deletedUser = await User.findByIdAndDelete(req.user.id);
+    const deletedUser = await User.findByIdAndDelete(req.user.id);  //trova l'utente per ID e lo elimina dal database
 
     if (!deletedUser) {
       return res.status(404).json({ message: "Utente non trovato." });
@@ -416,6 +422,9 @@ router.delete('/me', authMiddleware, async (req, res) => {
  */
 router.get('/restaurants', async (req, res) => {
   try {
+    //nella schermata dei ristoranti, per ogni locale vogliamo mostrare una bella foto di copertina e il tipo di cucina . 
+    // Il ristorante, però, non ha una foto propria nel suo profilo User: ha solo il menu. Dobbiamo quindi andare a pescare un piatto reale tra quelli che prepara.
+
     // 1. Prendi tutti gli utenti registrati come ristoranti
     const restaurants = await User.find({ role: 'restaurant' }).select('-password').lean();
 
@@ -425,15 +434,15 @@ router.get('/restaurants', async (req, res) => {
         // Cerca un piatto collegato al ristorante (controlla sia restaurantId che restaurant o id)
         const sampleMeal = await Meal.findOne({
           $or: [
-            { restaurantId: r._id },
-            { restaurant: r._id }
+            { restaurantId: r._id },  // Controlla se il campo restaurantId corrisponde all'ID del ristorante
+            { restaurant: r._id } // Controlla se il campo restaurant corrisponde all'ID del ristorante (per compatibilità con eventuali versioni precedenti)
           ]
         }).lean();
 
-        return {
+        return {  // Restituisce un oggetto con le informazioni del ristorante e del piatto campione con fallback se non esiste un piatto
           _id: r._id,
           name: r.restaurantName || r.name || 'Ristorante Partner',
-          cuisine: (sampleMeal && sampleMeal.strCategory) ? sampleMeal.strCategory.toUpperCase() : 'MENU PARTNER',
+          cuisine: (sampleMeal && sampleMeal.strCategory) ? sampleMeal.strCategory.toUpperCase() : 'MENU PARTNER',  // Se esiste un piatto campione, usa la categoria del piatto in maiuscolo, altrimenti mostra "MENU PARTNER"
           location: r.restaurantAddress || 'Ritiro al Bancone',
           phone: r.restaurantPhone || '',
           img: (sampleMeal && sampleMeal.strMealThumb) ? sampleMeal.strMealThumb : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80'
@@ -484,29 +493,29 @@ router.get('/restaurants', async (req, res) => {
  */
 router.put('/password', authMiddleware, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;  // Estrae la password attuale e la nuova password dal corpo della richiesta
 
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: 'Inserisci sia la password attuale che la nuova.' });
-    }
+    } // Controlla se entrambi i campi sono presenti
 
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'La nuova password deve contenere almeno 6 caratteri.' });
-    }
+    } // Controlla la lunghezza della nuova password
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id);  // Trova l'utente nel database usando l'ID estratto dal token JWT
     if (!user) {
       return res.status(404).json({ message: 'Utente non trovato.' });
-    }
+    } 
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password); // Confronta la password attuale fornita con quella cifrata nel database
     if (!isMatch) {
       return res.status(400).json({ message: 'La password attuale non è corretta.' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
-    await user.save();
+    const salt = await bcrypt.genSalt(10);  // Genera un nuovo salt per la cifratura della nuova password
+    user.password = await bcrypt.hash(newPassword, salt); // Cifra la nuova password e la assegna al campo password dell'utente
+    await user.save();  //
 
     res.status(200).json({ message: 'Password aggiornata con successo.' });
 
