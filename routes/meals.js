@@ -169,10 +169,10 @@ router.get('/', async (req, res) => {
  *       200:
  *         description: Array di stringhe con i nomi delle categorie
  */
-router.get('/categories', async (req, res) => {
+router.get('/categories', async (req, res) => { //MIDDLEWARE: non richiede autenticazione, è pubblico, serve per la ricerca avanzata e per la bacheca consigliata
   try {
-    const categories = await Meal.distinct('strCategory');
-    const validCategories = categories.filter(cat => cat && cat.trim() !== '');
+    const categories = await Meal.distinct('strCategory');  //estrae tutte le categorie uniche
+    const validCategories = categories.filter(cat => cat && cat.trim() !== ''); //cat controlla che la categoria non sia vuota o fatta di spazi bianchi
     res.status(200).json(validCategories);
   } catch (error) {
     res.status(500).json({ message: "Errore nel recupero delle categorie", error: error.message });
@@ -198,23 +198,23 @@ router.get('/categories', async (req, res) => {
  */
 router.get('/recommendations', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'customer') {
+    if (req.user.role !== 'customer') { //controllo RBAC: se l'utente non è un cliente, non può accedere alla bacheca consigliata
       return res.status(403).json({ message: "La bacheca personalizzata è riservata ai clienti." });
     }
 
     const user = await User.findById(req.user.id);
-    if (!user || !user.favoriteCategory) {
+    if (!user || !user.favoriteCategory) {  //se l'utente non ha una categoria preferita, restituisce un messaggio e alcuni piatti in evidenza
       return res.status(200).json({ 
         message: "Nessuna preferenza impostata. Ecco alcuni piatti in evidenza.",
-        recommendations: await Meal.find().limit(6)
+        recommendations: await Meal.find().limit(6) //restituisce 6 piatti a caso dal catalogo, senza filtri
       });
     }
 
     const recommendedMeals = await Meal.find({
-      strCategory: new RegExp(`^${user.favoriteCategory}$`, 'i')
+      strCategory: new RegExp(`^${user.favoriteCategory}$`, 'i')  //cerca piatti che corrispondono esattamente alla categoria preferita dell'utente, senza considerare maiuscole/minuscole
     }).limit(16);
 
-    res.status(200).json({
+    res.status(200).json({  //invio oggetto json
       favoriteCategory: user.favoriteCategory,
       count: recommendedMeals.length,
       recommendations: recommendedMeals
@@ -248,19 +248,19 @@ router.get('/recommendations', authMiddleware, async (req, res) => {
  *       404:
  *         description: Piatto non trovato
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {  //:id è un parametro dinamico che rappresenta l'id del piatto da recuperare
   try {
-    const { id } = req.params;
+    const { id } = req.params;  //estrae l'id del piatto dai parametri della richiesta
 
     if (!id || id === 'undefined' || id === 'null') {
       return res.status(400).json({ message: "ID piatto mancante o non valido." });
     }
 
     let meal = null;
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      meal = await Meal.findById(id).lean();
+    if (mongoose.Types.ObjectId.isValid(id)) {  //controlla se l'id è un ObjectId valido di MongoDB
+      meal = await Meal.findById(id).lean();  //se l'id è valido, cerca il piatto nel database usando findByID
     }
-    if (!meal) {
+    if (!meal) {  //ricerca il piatto anche usando l'idMeal, nel caso in cui l'id fornito non sia un ObjectId valido ma un codice piatto esterno(importrandolo da un dataset esterno)
       meal = await Meal.findOne({ idMeal: id }).lean();
     }
     if (!meal) {
@@ -269,24 +269,26 @@ router.get('/:id', async (req, res) => {
 
     const matchingRestaurants = await User.find({
       role: 'restaurant',
-      restaurantMenu: meal._id
-    }).select('_id restaurantName name restaurantAddress restaurantPhone').lean();
+      restaurantMenu: meal._id  //cerca tutti i ristoranti che hanno questo piatto nel loro menu
+    }).select('_id restaurantName name restaurantAddress restaurantPhone').lean();  //seleziona solo campi essenziali
 
-    meal.availableRestaurants = matchingRestaurants.map(r => ({
+    meal.availableRestaurants = matchingRestaurants.map(r => ({ //crea una proprietà del piatto avaibleRestaurants
       _id: r._id,
       name: r.restaurantName || r.name || 'Ristorante Partner',
       address: r.restaurantAddress || 'Ritiro al bancone',
       phone: r.restaurantPhone || ''
-    }));
+    })); //prende i ristoranti nell'array e li mappa in modo che ogni ristorante abbiamo id, nome, idnirizzo e telefono
 
     meal.restaurant = meal.availableRestaurants.length > 0 ? meal.availableRestaurants[0] : null;
+    //crea proprietà, se l'array dei ristoranti disponibili non è vuoto, prende il primo ristorante come riferimento, altrimenti lo imposta a null
+    //x facilitare la visualizzazione del piatto in dettaglio, mostrando il primo ristorante disponibile come riferimento
 
-    if (!meal.price || isNaN(meal.price) || Number(meal.price) <= 0) {
-      meal.price = Number(meal.strPrice) || 8.50;
-    } else {
-      meal.price = Number(meal.price);
+    if (!meal.price || isNaN(meal.price) || Number(meal.price) <= 0) {  //controlla se il prezzo del piatto è valido 
+      meal.price = Number(meal.strPrice) || 8.50;   //se non valido, cerca di usare strPrice come prezzo, altrimenti imposta il prezzo a 8.50 come default
+    } else {  
+      meal.price = Number(meal.price);  //se valido, mette il prezzo indicato in meal.price
     }
-    meal.preparationTime = Number(meal.preparationTime) || 15;
+    meal.preparationTime = Number(meal.preparationTime) || 15;  //se il tempo di preparazione non è valido, lo imposta a 15 minuti come default
 
     res.status(200).json(meal);
   } catch (error) {
@@ -373,7 +375,7 @@ router.post('/', authMiddleware, async (req, res) => {
       measures,
       price,
       preparationTime
-    } = req.body;
+    } = req.body; //estrae i campi dal corpo della richiesta, che devono essere forniti in formato JSON
 
     const newMeal = new Meal({
       idMeal: idMeal || undefined,
@@ -390,9 +392,9 @@ router.post('/', authMiddleware, async (req, res) => {
       price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,
       preparationTime: preparationTime !== undefined && !isNaN(preparationTime) ? Number(preparationTime) : 15,
       restaurantId: null // Nessun proprietario: appartiene al dataset comune
-    });
+    });//crea un nuovo oggetto Meal con i campi forniti, se alcuni campi non sono forniti, vengono impostati valori di default
 
-    const savedMeal = await newMeal.save();
+    const savedMeal = await newMeal.save(); //attente il salvataggio del nuovo piatto nel database, restituisce il piatto salvato con l'id generato da MongoDB
     res.status(201).json({ message: "Piatto globale creato con successo!", meal: savedMeal });
   } catch (error) {
     res.status(500).json({ message: "Errore durante la creazione del piatto.", error: error.message });
@@ -433,7 +435,7 @@ router.post('/', authMiddleware, async (req, res) => {
  */
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'restaurant') {
+    if (req.user.role !== 'admin' && req.user.role !== 'restaurant') {  //controllo RBAC: se l'utente non è admin o ristorante, non può modificare il piatto
       return res.status(403).json({ message: "Accesso negato: permessi insufficienti." });
     }
 
@@ -445,15 +447,17 @@ router.put('/:id', authMiddleware, async (req, res) => {
     if (req.user.role === 'restaurant') {
       const user = await User.findById(req.user.id);
       const isOwner = user && Array.isArray(user.restaurantMenu) && user.restaurantMenu.some(id => String(id) === String(meal._id));
-      if (!isOwner && String(meal.restaurantId) !== String(req.user.id)) {
+      //controlla se l'utente ristorante è il proprietario del piatto, confrontando gli id dei piatti nel menu del ristorante con l'id del piatto da modificare
+      //some controlla se almeno un elemento dell'array soddisfa la condizione, in questo caso se l'id del piatto corrisponde a quello del menu del ristorante
+      if (!isOwner && String(meal.restaurantId) !== String(req.user.id)) {  //controlla anche se l'id del ristorante proprietario del piatto corrisponde all'id dell'utente ristorante che sta tentando di modificare il piatto
         return res.status(403).json({ message: "Non hai i permessi per modificare questo piatto." });
       }
     }
 
     const updatedMeal = await Meal.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
-      { returnDocument: 'after' }
+      { $set: req.body }, //aggiorna il piatto con i campi forniti nel corpo della richiesta, $set: aggiorna solo i campi specificati senza sovrascrivere l'intero documento
+      { returnDocument: 'after' } //opzione per restituire il documento aggiornato dopo la modifica, invece del documento originale
     );
 
     res.status(200).json({ message: "Piatto modificato con successo!", meal: updatedMeal });
@@ -498,17 +502,18 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!meal) {
       return res.status(404).json({ message: "Piatto non trovato." });
     }
-
+    //se il ruolo è admin , può eliminare qualsiasi piatto, altrimenti se è un ristorante, deve essere il proprietario del piatto per poterlo eliminare
     if (req.user.role === 'restaurant') {
       const user = await User.findById(req.user.id);
       const isOwner = user && Array.isArray(user.restaurantMenu) && user.restaurantMenu.some(id => String(id) === String(meal._id));
       if (!isOwner && String(meal.restaurantId) !== String(req.user.id)) {
-        return res.status(403).json({ message: "Non hai i permessi per eliminare questo piatto." });
+        return res.status(403).json({ message: "Non hai i permessi per eliminare questo piatto." });  //stessa cosa della modifica
       }
       await User.findByIdAndUpdate(req.user.id, { $pull: { restaurantMenu: req.params.id } });
-    }
+      //rimuove l'id del piatto dal menu del ristorante, $pull: rimuove un elemento specifico da un array, in questo caso l'id del piatto eliminato
+    } 
 
-    await Meal.findByIdAndDelete(req.params.id);
+    await Meal.findByIdAndDelete(req.params.id);  //elimina il piatto dal database, findByIdAndDelete: trova il documento per id e lo elimina, restituendo il documento eliminato se necessario
     res.status(200).json({ message: "Piatto eliminato definitivamente.", id: req.params.id });
   } catch (error) {
     res.status(500).json({ message: "Errore durante l'eliminazione del piatto.", error: error.message });
