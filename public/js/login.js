@@ -79,31 +79,31 @@ const i18n = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { //ascolta se l'evento di carimento dei html iniettati è finito
   // Se già loggato, reindirizza subito in base al ruolo
   const existingToken = localStorage.getItem('token');
   const existingRole = localStorage.getItem('userRole');
-  if (existingToken) {
-    redirectUserByRole(existingRole);
+  if (existingToken) {  //se esiste token
+    redirectUserByRole(existingRole); //ti redirige con una funzione in base al ruolo
     return;
   }
 
-  renderLanguageUI();
-  renderDrawerAuth();
+  renderLanguageUI(); //carica la ringua
+  renderDrawerAuth(); //e la barra laterale
 });
 
 function toggleLanguage() {
-  currentLang = (currentLang === 'IT') ? 'EN' : 'IT';
-  localStorage.setItem('appLang', currentLang);
+  currentLang = (currentLang === 'IT') ? 'EN' : 'IT'; 
+  localStorage.setItem('appLang', currentLang); //setta sulla local storage la lingua attuale
   renderLanguageUI();
   renderDrawerAuth();
 }
 
-function renderLanguageUI() {
+function renderLanguageUI() { //stessa cosa in registrazione
   const t = i18n[currentLang];
-  const setT = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
+  const setT = (id, text) => {  //prende id del testo da cambiare e quello nuovo da inserire
+    const el = document.getElementById(id); //salva in el l'id da tradurre
+    if (el) el.textContent = text;  //se el esiste allora carichi in textcontext text cioe carichi il testo da inserire nel testo di id
   };
 
   setT('lang-btn', t.btn);
@@ -140,7 +140,7 @@ function renderLanguageUI() {
 /**
  * Mostra / Nasconde la password al clic
  */
-function togglePasswordVisibility(inputId, iconId) {
+function togglePasswordVisibility(inputId, iconId) {  //STESSA COSA CHE IN REGISTER
   const pwdInput = document.getElementById(inputId);
   const icon = document.getElementById(iconId);
   if (!pwdInput || !icon) return;
@@ -158,29 +158,31 @@ function togglePasswordVisibility(inputId, iconId) {
  * Gestione invio Form di Login
  */
 async function handleLoginSubmit(e) {
-  e.preventDefault();
+  e.preventDefault(); //blocca comportamento di defualt del brawser che ricarica la pagina perdendo tutto
 
-  const emailInput = document.getElementById('email');
+  const emailInput = document.getElementById('email');  //riga 70
   const passwordInput = document.getElementById('password');
   const alertBox = document.getElementById('login-alert');
   const submitBtn = document.getElementById('btn-submit-login');
-  const t = i18n[currentLang];
+  const t = i18n[currentLang]; 
+  //salva in delle variabili i box delle varie cose
 
-  const email = emailInput ? emailInput.value.trim() : '';
-  const password = passwordInput ? passwordInput.value : '';
+  const email = emailInput ? emailInput.value.trim() : '';  //taglia gli spazi bianchi
+  const password = passwordInput ? passwordInput.value : '';  //prende il valore
 
-  if (!email || !password) {
+  if (!email || !password) {  
     showAlert(alertBox, t.errFillAll, 'danger');
     return;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = t.btnSubmitting;
+  submitBtn.disabled = true;  //disabilita il bottone
+  submitBtn.textContent = t.btnSubmitting;  //cambia testo
 
   try {
+    //chiama la rotta post login
     const data = await apiRequest('/auth/login', 'POST', { email, password });
 
-    if (!data || !data.token) {
+    if (!data || !data.token) { //se data è vuoto e non ce token lancia un errore
       throw new Error(data && data.message ? data.message : t.errLogin);
     }
 
@@ -193,9 +195,9 @@ async function handleLoginSubmit(e) {
       localStorage.setItem('restaurantName', data.restaurantName || data.user.restaurantName);
     }
 
-    showAlert(alertBox, t.loginSuccess, 'success');
+    showAlert(alertBox, t.loginSuccess, 'success'); //lascia una alertbox di successo
 
-    setTimeout(() => {
+    setTimeout(() => {  //con successp  allora fa il redirect
       redirectUserByRole(data.role || (data.user && data.user.role));
     }, 800);
 
@@ -207,66 +209,17 @@ async function handleLoginSubmit(e) {
   }
 }
 
-function showAlert(box, message, type) {
+function showAlert(box, message, type) {  //STESSA COSA CHE IN REGISTER
   if (!box) return;
   box.className = `alert alert-${type} rounded-0 small py-2 px-3 mb-3`;
   box.textContent = message;
   box.classList.remove('d-none');
 }
 
-function redirectUserByRole(role) {
+function redirectUserByRole(role) { //ti redireziona nel caso tu sia loggato con determinati ruoli
   if (role === 'restaurant') {
     window.location.href = 'stats.html';
   } else {
     window.location.href = 'catalog.html';
-  }
-}
-
-function renderDrawerAuth() {
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('userRole');
-  const name = localStorage.getItem('userName') || 'Utente';
-  const drawerSec = document.getElementById('drawer-user-section');
-
-  if (!drawerSec) return;
-
-  const currentLang = localStorage.getItem('appLang') || 'IT';
-  const isIt = currentLang === 'IT';
-
-  // Se è un ristorante, rendiamo visibile il link alle statistiche/gestionale
-  const statsLink = document.getElementById('drawer-stats-link');
-  if (statsLink && role === 'restaurant') {
-    statsLink.classList.remove('d-none');
-  }
-
-  if (token) {
-    drawerSec.innerHTML = `
-      <div class="small text-muted mb-1 text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accesso effettuato come:' : 'Logged in as:'}
-      </div>
-      <div class="fw-bold text-uppercase mb-3" style="font-family: 'Space Grotesk', sans-serif;">
-        ${name} <span class="badge bg-black rounded-0 ms-1" style="font-size: 0.65rem;">${role}</span>
-      </div>
-
-      <!-- Tasto Vai al Profilo -->
-      <a href="profile.html" class="btn btn-dark rounded-0 w-100 py-2 mb-2 fw-bold text-uppercase d-flex justify-content-between align-items-center" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        <span>${isIt ? 'Vedi il mio profilo' : 'View my profile'}</span>
-        <i class="bi bi-arrow-right"></i>
-      </a>
-
-      <!-- Tasto Logout -->
-      <button class="btn btn-outline-dark rounded-0 w-100 btn-sm py-2 fw-bold text-uppercase" style="font-size: 0.75rem;" onclick="logout()">
-        ${isIt ? 'Logout' : 'Logout'}
-      </button>
-    `;
-  } else {
-    drawerSec.innerHTML = `
-      <a href="login.html" class="btn btn-dark rounded-0 w-100 mb-2 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Accedi' : 'Login'}
-      </a>
-      <a href="register.html" class="btn btn-outline-dark rounded-0 w-100 py-2 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.05em;">
-        ${isIt ? 'Registrati' : 'Register'}
-      </a>
-    `;
   }
 }

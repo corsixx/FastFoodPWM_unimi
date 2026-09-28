@@ -66,8 +66,8 @@ const i18n = {
 // drawer/modali sono stati iniettati nella pagina
 // ============================================================================
 document.addEventListener('componentsLoaded', async () => {
-  renderRegisterLanguageUI();
-  await loadFavoriteCategories();
+  renderRegisterLanguageUI(); //per cambiare lingua
+  await loadFavoriteCategories(); //per caricare le categorie pref dall'utente
 });
 
 /**
@@ -75,18 +75,18 @@ document.addEventListener('componentsLoaded', async () => {
  * e popola dinamicamente la select "Piatto/Cucina Preferita".
  */
 async function loadFavoriteCategories() {
-  const select = document.getElementById('favoriteCategory');
-  if (!select) return;
+  const select = document.getElementById('favoriteCategory'); //prende da html le righe con classe favoriteCategory
+  if (!select) return; 
 
   try {
-    const categories = await apiRequest('/meals/categories');
+    const categories = await apiRequest('/meals/categories'); //richiede le categorie da rotte, sempre get
 
     if (Array.isArray(categories)) {
       categories.forEach(cat => {
-        const option = document.createElement('option');
+        const option = document.createElement('option');  //per ogni catgoria crea un opzione del menu a tendina hmtl
         option.value = cat;
         option.textContent = cat;
-        select.appendChild(option);
+        select.appendChild(option); //la appendi coem figlio sempre sotto al menu a tendina
       });
     }
   } catch (err) {
@@ -101,11 +101,12 @@ async function loadFavoriteCategories() {
  */
 function renderRegisterLanguageUI() {
   const t = i18n[currentLang];
-  const setT = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
+  const setT = (id, text) => {  //prende id del testo da cambiare e quello nuovo da inserire
+    const el = document.getElementById(id); //salva in el l'id da tradurre
+    if (el) el.textContent = text;  //se el esiste allora carichi in textcontext text cioe carichi il testo da inserire nel testo di id
   };
 
+  //caricamento delle traduzioni
   setT('txt-badge-auth', t.badgeAuth);
   setT('txt-register-title', t.registerTitle);
   setT('txt-register-sub', t.registerSub);
@@ -132,15 +133,15 @@ function renderRegisterLanguageUI() {
  * Mostra / Nasconde la password al clic
  */
 function togglePasswordVisibility(inputId, iconId) {
-  const pwdInput = document.getElementById(inputId);
-  const icon = document.getElementById(iconId);
+  const pwdInput = document.getElementById(inputId);  //campo di input della password
+  const icon = document.getElementById(iconId); //icona visibilita
   if (!pwdInput || !icon) return;
 
-  if (pwdInput.type === 'password') {
-    pwdInput.type = 'text';
-    icon.classList.replace('bi-eye', 'bi-eye-slash');
+  if (pwdInput.type === 'password') {//controlla se è password coi pallini neri
+    pwdInput.type = 'text'; //li cambia in testo
+    icon.classList.replace('bi-eye', 'bi-eye-slash'); //cambia icona con occhio apero
   } else {
-    pwdInput.type = 'password';
+    pwdInput.type = 'password'; //senno il contrario
     icon.classList.replace('bi-eye-slash', 'bi-eye');
   }
 }
@@ -149,8 +150,9 @@ function togglePasswordVisibility(inputId, iconId) {
  * Gestione switch ruolo
  */
 function setRole(role) {
-  selectedRole = role;
+  selectedRole = role;  //prende il ruolo scelto
 
+  //recupera interfaccia DOM con tutti i campi da compilare
   const btnCust = document.getElementById('btn-role-customer');
   const btnRest = document.getElementById('btn-role-restaurant');
   const custFields = document.getElementById('customer-fields');
@@ -164,18 +166,18 @@ function setRole(role) {
   const ivaInput = document.getElementById('IVAnumber');
 
   if (role === 'customer') {
-    btnCust.className = 'btn btn-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2';
-    btnRest.className = 'btn btn-outline-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2';
-    custFields.classList.remove('d-none');
-    restFields.classList.add('d-none');
+    btnCust.className = 'btn btn-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2'; //assegna al tsto con scritto customer il clore nero
+    btnRest.className = 'btn btn-outline-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2'; //l'altro diventa col contorno nero
+    custFields.classList.remove('d-none');  //toglie la non visibilita ai campi del customer
+    restFields.classList.add('d-none'); //aggiugne non visbnlita ai campi da ristgoratore
 
-    // Reset campi ristorante quando si passa a cliente
+    // Reset campi ristorante quando si passa a cliente (se ovviamente ci sono)
     if (restNameInput) { restNameInput.value = ''; restNameInput.required = false; }
     if (restAddrInput) { restAddrInput.value = ''; restAddrInput.required = false; }
     if (restPhoneInput) { restPhoneInput.value = ''; }
     if (ivaInput) { ivaInput.value = ''; }
   } else {
-    btnRest.className = 'btn btn-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2';
+    btnRest.className = 'btn btn-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2'; //assegna al tsto con scritto ristoratore il clore nero
     btnCust.className = 'btn btn-outline-dark rounded-0 flex-grow-1 fw-bold small text-uppercase py-2';
     custFields.classList.add('d-none');
     restFields.classList.remove('d-none');
@@ -187,29 +189,30 @@ function setRole(role) {
     if (restAddrInput) { restAddrInput.required = true; }
   }
 
-  renderRegisterLanguageUI();
+  renderRegisterLanguageUI(); //ricarica la lingua
 }
 
 /**
  * Invio form registrazione
  */
-async function handleRegisterSubmit(e) {
-  e.preventDefault();
+async function handleRegisterSubmit(e) {  //evento come e
+  e.preventDefault(); //blocca comportamento di defualt del brawser che ricarica la pagina perdendo tutto
 
   const name = document.getElementById('name').value.trim();
   const surname = document.getElementById('surname').value.trim();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  const alertBox = document.getElementById('register-alert');
+  const alertBox = document.getElementById('register-alert'); //riga 34 box per alert
   const submitBtn = document.getElementById('btn-submit-register');
   const t = i18n[currentLang];
+  //salva i valori dei campi e rimuove lo spazzio trannechje per la password, e seleziona elementi alertbox (riga 34) e il bottone (120)
 
-  if (!name || !surname || !email || !password) {
+  if (!name || !surname || !email || !password) { //che non siano vuoti
     showAlert(alertBox, t.errFillAll, 'danger');
     return;
   }
 
-  if (password.length < 6) {
+  if (password.length < 6) {  //controlla che la password sia di almeno 6 caratteri
     showAlert(alertBox, t.errPassLen, 'danger');
     return;
   }
@@ -220,8 +223,9 @@ async function handleRegisterSubmit(e) {
     email,
     password,
     role: selectedRole
-  };
+  };  //campi base
 
+  //in base al ruolo sleziona i dati da mettere nel payload
   if (selectedRole === 'customer') {
     const favCat = document.getElementById('favoriteCategory').value;
     if (favCat) payload.favoriteCategory = favCat;
@@ -234,22 +238,23 @@ async function handleRegisterSubmit(e) {
     const restPhone = document.getElementById('restaurantPhone').value.trim();
     const ivaNumber = document.getElementById('IVAnumber').value.trim();
 
-    if (!restName || !restAddr) {
+    if (!restName || !restAddr) { //se vuoti
       showAlert(alertBox, t.errFillAll, 'danger');
       return;
     }
 
+    //carica nel payload per ristoratori
     payload.restaurantName = restName;
     payload.restaurantAddress = restAddr;
     if (restPhone) payload.restaurantPhone = restPhone;
     if (ivaNumber) payload.IVAnumber = ivaNumber;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = t.btnSubmitting;
+  submitBtn.disabled = true;  //per impedire doppi vlic
+  submitBtn.textContent = t.btnSubmitting;  //cambia la scritta in invio in corso
 
   try {
-    const data = await apiRequest('/auth/register', 'POST', payload);
+    const data = await apiRequest('/auth/register', 'POST', payload); //invia una post con payload  e register
 
     if (!data) {
       throw new Error(t.errRegister);
@@ -257,16 +262,16 @@ async function handleRegisterSubmit(e) {
 
     showAlert(alertBox, t.successRegister, 'success');
 
-    if (data.token) {
+    if (data.token) { //se backend restituisce subito il token memorizza nel localstorage tutte le info
       localStorage.setItem('token', data.token);
-      localStorage.setItem('userRole', data.role || (data.user && data.user.role) || selectedRole);
+      localStorage.setItem('userRole', data.role || (data.user && data.user.role) || selectedRole); //i dati possono essere wrappati oppure cosi
       localStorage.setItem('userName', data.name || (data.user && (data.user.name || data.user.restaurantName)) || name);
       localStorage.setItem('userId', data.userId || (data.user && data.user._id) || '');
       if (data.restaurantName || (data.user && data.user.restaurantName)) {
         localStorage.setItem('restaurantName', data.restaurantName || data.user.restaurantName);
       }
 
-      setTimeout(() => {
+      setTimeout(() => {  //dopo 1 sec vieni rimandato da in qualche luogo
         if (selectedRole === 'restaurant') {
           window.location.href = 'stats.html';
         } else {
@@ -274,7 +279,7 @@ async function handleRegisterSubmit(e) {
         }
       }, 1000);
     } else {
-      setTimeout(() => {
+      setTimeout(() => {  //se manca il token allora loginm
         window.location.href = 'login.html';
       }, 1200);
     }
@@ -282,14 +287,14 @@ async function handleRegisterSubmit(e) {
   } catch (err) {
     console.error('Errore Registrazione:', err);
     showAlert(alertBox, err.message || t.errRegister, 'danger');
-    submitBtn.disabled = false;
-    submitBtn.textContent = t.btnSubmit;
+    submitBtn.disabled = false; //fa tornare il tasto norrmale
+    submitBtn.textContent = t.btnSubmit;  //anche il testo torna noramle
   }
 }
 
-function showAlert(box, message, type) {
-  if (!box) return;
-  box.className = `alert alert-${type} rounded-0 small py-2 px-3 mb-3`;
-  box.textContent = message;
-  box.classList.remove('d-none');
+function showAlert(box, message, type) {  //funzione per l'alert dove box sta per oggetto dom tipo un div qualcosa destinato a contenere l'alert e type e il tipo tipo success wanming ecc
+  if (!box) return; //se non cotniene il box
+  box.className = `alert alert-${type} rounded-0 small py-2 px-3 mb-3`; //dimensioni box
+  box.textContent = message;  //carica il messaggio
+  box.classList.remove('d-none'); //rimuove la non visibilita
 }
