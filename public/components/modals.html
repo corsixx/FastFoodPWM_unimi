@@ -1,5 +1,5 @@
 <!-- MODALE INFORMATIVA -->
-<div class="modal fade" id="modalInfo" tabindex="-1">
+<div class="modal fade" id="modalInfo" tabindex="-1"> <!--modale informativa generica, richiamata dal footer, con contenuto fisso-->
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-0 border-dark">
       <div class="modal-header border-bottom">
@@ -14,7 +14,7 @@
 </div>
 
 <!-- MODALE NOTE LEGALI -->
-<div class="modal fade" id="modalLegal" tabindex="-1">
+<div class="modal fade" id="modalLegal" tabindex="-1">  <!--modale con privacy ecc-->
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-0 border-dark">
       <div class="modal-header border-bottom">
@@ -28,7 +28,8 @@
   </div>
 </div>
 
-<!-- POP-UP MODALE: SCEGLI IL RISTORANTE (USATA NEL CATALOGO) -->
+<!-- POP-UP MODALE: SCEGLI IL RISTORANTE (USATA NEL CATALOGO) pop up quando fai aggiungi al carrello-->
+ <!--modale aperto via JS da promptRestaurantSelection() in app.js--> 
 <div class="modal fade" id="modalChooseRestaurant" tabindex="-1" aria-labelledby="modalChooseRestaurantLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
     <div class="modal-content rounded-0 border border-dark">
@@ -47,18 +48,18 @@
           <div>
             <div class="fw-bold text-uppercase small" id="modal-picker-meal-name" style="font-family: 'Space Grotesk', sans-serif;">NOME PIATTO</div>
             <div class="font-monospace fw-bold" id="modal-picker-meal-price">€ 0.00</div>
-          </div>
+          </div>  <!--elementi popolati sempre da promptRestaurantSelection con i dati del piatto-->
         </div>
         <p class="small text-muted mb-3" id="txt-choose-rest-sub">
           Seleziona il locale più comodo per ritirare il piatto. Se nessuno è nelle vicinanze, puoi annullare.
         </p>
-        <div id="modal-restaurant-list" class="d-flex flex-column gap-2"></div>
+        <div id="modal-restaurant-list" class="d-flex flex-column gap-2"></div> <!--contenitore che si riempie con ul pulsante per ogni ristorante-->
       </div>
       <div class="modal-footer border-top p-2 bg-light d-flex justify-content-between">
         <span class="small text-muted" style="font-size: 0.75rem;">Nessun obbligo d'acquisto</span>
         <button type="button" class="btn btn-outline-dark btn-sm rounded-0 fw-bold text-uppercase px-3" data-bs-dismiss="modal">
           ANNULLA / CHIUDI ×
-        </button>
+        </button> <!--usa data bs dismiss per chiudere -->
       </div>
     </div>
   </div>
