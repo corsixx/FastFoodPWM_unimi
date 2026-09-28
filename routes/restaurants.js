@@ -34,8 +34,8 @@ router.get('/', async (req, res) => {
     const { name, city } = req.query;
     let filter = { role: 'restaurant' };
 
-    if (name && name.trim() !== '') {
-      filter.restaurantName = { $regex: name.trim(), $options: 'i' };
+    if (name && name.trim() !== '') { // Se il parametro name è presente e non è vuoto, aggiungi un filtro per il nome del ristorante
+      filter.restaurantName = { $regex: name.trim(), $options: 'i' }; // Ricerca case-insensitive per nome del ristorante, utilizzando espressioni regolari
     }
     if (city && city.trim() !== '') {
       filter.restaurantAddress = { $regex: city.trim(), $options: 'i' };
@@ -80,7 +80,7 @@ router.get('/:id/menu', async (req, res) => {
       return res.status(404).json({ message: "Ristorante non trovato." });
     }
 
-    res.status(200).json({
+    res.status(200).json({  //metto solo i dati essenziali del ristorante e il menu
       _id: restaurant._id,
       restaurantName: restaurant.restaurantName,
       restaurantAddress: restaurant.restaurantAddress,
@@ -128,19 +128,20 @@ router.post('/menu/add-existing', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Operazione consentita solo ai ristoratori." });
     }
 
-    const { mealId } = req.body;
-    const meal = await Meal.findById(mealId);
+    const { mealId } = req.body;  //estrae l'ID del piatto dal corpo della richiesta
+    const meal = await Meal.findById(mealId); //controlla se il piatto esiste nel catalogo comune
     if (!meal) {
       return res.status(404).json({ message: "Piatto non trovato nel catalogo comune." });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate( //trova l'utente loggato
       req.user.id,
-      { $addToSet: { restaurantMenu: mealId } },
-      { returnDocument: 'after' }
+      { $addToSet: { restaurantMenu: mealId } },  //aggiunge l'ID del piatto al menu del ristoratore senza duplicati(solo se non c'è già)
+      { returnDocument: 'after' } //ritorna il documento aggioranto dopo l'operazione
     ).select('-password');
 
-    res.status(200).json({ message: "Piatto aggiunto al menu!", menu: updatedUser.restaurantMenu });
+    res.status(200).json({ message: "Piatto aggiunto al menu!", menu: updatedUser.restaurantMenu });  //updatedUser.restaurantMenu contiene l'elenco aggiornato 
+    //dei piatti nel menu del ristoratore coso che il frontend possa aggiornare la pagina
   } catch (error) {
     res.status(500).json({ message: "Errore nell'aggiornamento del menu.", error: error.message });
   }
@@ -232,7 +233,7 @@ router.post('/menu/create-custom', authMiddleware, async (req, res) => {
       preparationTime
     } = req.body;
 
-    const newMeal = new Meal({
+    const newMeal = new Meal({  //crea un nuovo piatto personalizzato con i dati forniti
       idMeal: idMeal || undefined,
       strMeal,
       strMealAlternate: strMealAlternate || null,
@@ -244,16 +245,16 @@ router.post('/menu/create-custom', authMiddleware, async (req, res) => {
       strYoutube: strYoutube || "",
       ingredients: Array.isArray(ingredients) ? ingredients : [],
       measures: Array.isArray(measures) ? measures : [],
-      price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,
+      price: price !== undefined && !isNaN(price) ? Number(price) : 8.50,  // Imposta un prezzo predefinito se non fornito o non valido
       preparationTime: preparationTime !== undefined && !isNaN(preparationTime) ? Number(preparationTime) : 15,
       restaurantId: req.user.id
     });
 
-    const savedMeal = await newMeal.save();
+    const savedMeal = await newMeal.save(); //salva il nuovo piatto nel database con await per assicurarsi che l'operazione sia completata prima di procedere
 
-    await User.findByIdAndUpdate(req.user.id, { $addToSet: { restaurantMenu: savedMeal._id } });
+    await User.findByIdAndUpdate(req.user.id, { $addToSet: { restaurantMenu: savedMeal._id } });  //aggiunge l'ID del nuovo piatto al menu del ristoratore senza duplicati
 
-    res.status(201).json({ message: "Piatto personalizzato creato con successo!", meal: savedMeal });
+    res.status(201).json({ message: "Piatto personalizzato creato con successo!", meal: savedMeal }); //ritorna i dati del nuovo piatto al frontend
   } catch (error) {
     res.status(500).json({ message: "Errore durante la creazione del piatto.", error: error.message });
   }
@@ -293,22 +294,22 @@ router.delete('/menu/:mealId', authMiddleware, async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { $pull: { restaurantMenu: mealId } },
+      { $pull: { restaurantMenu: mealId } },  //rimuove l'ID del piatto dal menu del ristoratore con $pull
       { returnDocument: 'after' }
     ).select('-password');
 
     const meal = await Meal.findById(mealId);
-    if (meal && meal.restaurantId && meal.restaurantId.toString() === req.user.id) {
-      await Meal.findByIdAndDelete(mealId);
+    if (meal && meal.restaurantId && meal.restaurantId.toString() === req.user.id) {  //controlla se il piatto esiste e se è stato creato dal ristoratore loggato
+      await Meal.findByIdAndDelete(mealId); //elimina il piatto dal database se era personalizzato(perché se creato da un ristorantore il restaurantId sarà uguale all'ID del ristoratore loggato)
     }
 
     res.status(200).json({ 
       message: "Piatto rimosso dal menu (ed eliminato dal catalogo se creato da te)!", 
-      menu: updatedUser.restaurantMenu 
+      menu: updatedUser.restaurantMenu //ritorna l'elenco aggiornato dei piatti nel menu del ristoratore coso che il frontend possa aggiornare la pagina
     });
   } catch (error) {
     res.status(500).json({ message: "Errore durante la rimozione del piatto.", error: error.message });
   }
 });
 
-module.exports = router;
+module.exports = router;  // Esporta il router per essere utilizzato in altri file dell'applicazione

@@ -73,7 +73,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const { restaurantId, items, paymentMethod } = req.body;
 
-    if (!restaurantId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!restaurantId || !items || !Array.isArray(items) || items.length === 0) { //ne basta una che non sia valida per l'errore
       return res.status(400).json({ message: "Il carrello deve contenere almeno un piatto valido." });
     }
 
@@ -82,32 +82,32 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Ristorante non trovato nel sistema." });
     }
 
-    let calculatedTotal = 0;
-    let maxDishPrepTime = 0;
-    const orderItems = [];
+    let calculatedTotal = 0;  // Totale calcolato basato sui prezzi congelati dei piatti(cambia col tempo)
+    let maxDishPrepTime = 0;  // Tempo di preparazione del piatto più lento nel carrello
+    const orderItems = [];  // Array per salvare i dettagli dei piatti ordinati
 
     // 1. Estrazione dati dal carrello
     for (const item of items) {
-      const mealDoc = await Meal.findById(item.mealId);
+      const mealDoc = await Meal.findById(item.mealId); //carica dal database il piatto 
       
-      let unitPrice = 8.50;
-      if (mealDoc && mealDoc.price !== undefined && mealDoc.price !== null && !isNaN(mealDoc.price)) {
-        unitPrice = Number(mealDoc.price);
-      } else if (mealDoc && mealDoc.strPrice !== undefined && mealDoc.strPrice !== null && !isNaN(mealDoc.strPrice)) {
+      let unitPrice = 8.50; // Prezzo di default se non trovato o non valido
+      if (mealDoc && mealDoc.price !== undefined && mealDoc.price !== null && !isNaN(mealDoc.price)) {  //1. mealDoc esiste, è prezzo valido ed un numero allora
+        unitPrice = Number(mealDoc.price);  //assigna il prezzo del piatto dal database
+      } else if (mealDoc && mealDoc.strPrice !== undefined && mealDoc.strPrice !== null && !isNaN(mealDoc.strPrice)) { //2. mealDoc esiste, price non valido ma esiste strPrice
         unitPrice = Number(mealDoc.strPrice);
-      } else if (item.price !== undefined && item.price !== null && !isNaN(item.price)) {
+      } else if (item.price !== undefined && item.price !== null && !isNaN(item.price)) { //backup: se il piatto non esiste più nel database ma il client ha inviato un prezzo valido, lo usa
         unitPrice = Number(item.price);
       }
 
-      const qty = Number(item.quantity) || 1;
+      const qty = Number(item.quantity) || 1; //quantità ordinata, default 1 se non valida
       calculatedTotal += unitPrice * qty;
 
-      const dishPrepTime = (mealDoc && mealDoc.preparationTime) ? Number(mealDoc.preparationTime) : 10;
-      if (dishPrepTime > maxDishPrepTime) {
+      const dishPrepTime = (mealDoc && mealDoc.preparationTime) ? Number(mealDoc.preparationTime) : 10; //se il piatto esiste e ha un prep time, allora lo usa convertito in nujmero
+      if (dishPrepTime > maxDishPrepTime) { //aggiorna il tempo di preparazione massimo se il prep time del piatto è maggiore
         maxDishPrepTime = dishPrepTime;
       }
 
-      orderItems.push({
+      orderItems.push({ //pusha i dettagli del piatto ordinato nell'array orderItems
         meal: mealDoc ? mealDoc._id : item.mealId,
         name: mealDoc ? mealDoc.strMeal : (item.name || 'Piatto'),
         quantity: qty,
@@ -116,26 +116,26 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     // 2. SIMULAZIONE CODA A MACCHINE PARALLELE (Greedy List Scheduling)
-    const activeOrdersInQueue = await Order.find({
+    const activeOrdersInQueue = await Order.find({  // Trova tutti gli ordini attivi(ordinato/in preparazione) per il ristorante specifico
       restaurant: restaurantId,
-      status: { $in: ['ordinato', 'in preparazione'] }
-    }).sort({ createdAt: 1 }).populate('items.meal');
+      status: { $in: ['ordinato', 'in preparazione'] } //controlla che sia uno dei due stati
+    }).sort({ createdAt: 1 }).populate('items.meal'); // Ordina dal più vecchio al più recente e popola i dettagli dei piatti
 
-    const stationLoads = new Array(KITCHEN_CAPACITY).fill(0);
+    const stationLoads = new Array(KITCHEN_CAPACITY).fill(0); //crea array lungo 2 e lo rimepie di 0, rappresenta il carico di lavoro di ciascuna postazione di cottura
 
     for (const activeOrder of activeOrdersInQueue) {
-      let activeOrderMaxPrep = 10;
+      let activeOrderMaxPrep = 10;  // Tempo di preparazione massimo per l'ordine attivo (default 10 minuti)
       if (Array.isArray(activeOrder.items)) {
-        for (const it of activeOrder.items) {
-          const prep = it.meal?.preparationTime || 10;
-          if (prep > activeOrderMaxPrep) activeOrderMaxPrep = prep;
+        for (const it of activeOrder.items) { //esamina tutti i piatti dell'ordine attivo 
+          const prep = it.meal?.preparationTime || 10; //se il piatto non esiste usa 10 minuti come default
+          if (prep > activeOrderMaxPrep) activeOrderMaxPrep = prep; //il piatto con tempo di preparazione maggiore determina il tempo di preparazione dell'ordine
         }
       }
 
       // Trova la postazione con il carico minore (Greedy)
-      let minLoadIndex = 0;
-      for (let i = 1; i < KITCHEN_CAPACITY; i++) {
-        if (stationLoads[i] < stationLoads[minLoadIndex]) {
+      let minLoadIndex = 0; //assumere che la prima postazione sia la più scarica
+      for (let i = 1; i < KITCHEN_CAPACITY; i++) {    //il confronto si ferma alla prima postazione, ma è scalabile a più postazioni
+        if (stationLoads[i] < stationLoads[minLoadIndex]) { //confronta i minuti di lavoro e trova quella col carico minore
           minLoadIndex = i;
         }
       }
@@ -143,8 +143,8 @@ router.post('/', authMiddleware, async (req, res) => {
       stationLoads[minLoadIndex] += activeOrderMaxPrep;
     }
 
-    const queueDelayMinutes = Math.min(...stationLoads);
-    const totalEstimatedMinutes = queueDelayMinutes + maxDishPrepTime;
+    const queueDelayMinutes = Math.min(...stationLoads);  //spacchetta stationLoads, prende il valore minimo come delay
+    const totalEstimatedMinutes = queueDelayMinutes + maxDishPrepTime;  
 
     const newOrder = new Order({
       customer: req.user.id,
@@ -156,7 +156,7 @@ router.post('/', authMiddleware, async (req, res) => {
       status: 'ordinato'
     });
 
-    const savedOrder = await newOrder.save();
+    const savedOrder = await newOrder.save(); //salva il documento sul DB
 
     res.status(201).json({
       message: "Ordine inviato con successo!",
@@ -200,7 +200,7 @@ router.get('/my-orders', authMiddleware, async (req, res) => {
     const orders = await Order.find({ customer: req.user.id })
       .populate('restaurant', 'restaurantName restaurantAddress restaurantPhone')
       .populate('items.meal')
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) //dal più recente al più vecchio
       .lean();
 
     // Recupera TUTTI gli ordini attivi per ricalcolare la coda residua
@@ -208,28 +208,27 @@ router.get('/my-orders', authMiddleware, async (req, res) => {
       status: { $in: ['ordinato', 'in preparazione'] }
     }).sort({ createdAt: 1 }).populate('items.meal').lean();
 
-    const nowTime = Date.now();
-
-    const enrichedOrders = orders.map(ord => {
-      const status = (ord.status || '').toLowerCase().trim();
+    const enrichedOrders = orders.map(ord => {  //arricchisce ogni ordine con tempo residuo e stato
+      const status = (ord.status || '').toLowerCase().trim(); 
 
       if (status === 'consegnato') {
         ord.currentWaitMinutes = 0;
-        return ord;
+        return ord; //restituisce l'ordine così com'è se è già consegnato, senza ricalcolo
       }
 
-      let myMaxPrep = 10;
+      let myMaxPrep = 10; //fallback
       if (Array.isArray(ord.items)) {
         for (const it of ord.items) {
-          const pTime = it.meal?.preparationTime || 10;
-          if (pTime > myMaxPrep) myMaxPrep = pTime;
+          const pTime = it.meal?.preparationTime || 10; //se il piatto non esiste usa 10 minuti come default
+          if (pTime > myMaxPrep) myMaxPrep = pTime; //aggiorna il tempo di preparazione massimo se il prep time del piatto è maggiore (specifico ordine)
         }
       }
 
       // Prendi solo gli ordini attivi dello stesso ristorante ordinati prima di questo
       const ordersAhead = activeOrders.filter(ao => 
-        String(ao.restaurant) === String(ord.restaurant?._id || ord.restaurant) &&
-        new Date(ao.createdAt).getTime() < new Date(ord.createdAt).getTime()
+        String(ao.restaurant) === String(ord.restaurant?._id || ord.restaurant) &&  //sceglie oridni dello stesso risotante
+        new Date(ao.createdAt).getTime() < new Date(ord.createdAt).getTime()  //con data di creazione precedente a questo ordine
+        //new date prende createdAt e lo trasforma in una data comprenbile, get time in millisecondi
       );
 
       // Ricalcolo List Scheduling per gli ordini che precedono questo nella coda
@@ -239,21 +238,20 @@ router.get('/my-orders', authMiddleware, async (req, res) => {
         if (Array.isArray(ahead.items)) {
           for (const it of ahead.items) {
             const p = it.meal?.preparationTime || 10;
-            if (p > aheadPrep) aheadPrep = p;
+            if (p > aheadPrep) aheadPrep = p; //calcolo del tempo di preparazione massimo per l'ordine che precede questo
           }
         }
         let minLoadIndex = 0;
         for (let i = 1; i < KITCHEN_CAPACITY; i++) {
           if (stationLoads[i] < stationLoads[minLoadIndex]) minLoadIndex = i;
         }
-        stationLoads[minLoadIndex] += aheadPrep;
+        stationLoads[minLoadIndex] += aheadPrep;  //come prima, individuo la stazione col carico minore e aggiungo l'ordine precendete alla piu scarica
       }
 
       const queueDelay = Math.min(...stationLoads);
-      const dynamicTotal = queueDelay + myMaxPrep;
+      const dynamicTotal = queueDelay + myMaxPrep; //stessa cosa di prima
 
-      const elapsedMinutes = Math.floor((nowTime - new Date(ord.createdAt).getTime()) / 60000);
-      ord.currentWaitMinutes = Math.max(1, dynamicTotal - elapsedMinutes);
+      ord.currentWaitMinutes = dynamicTotal;
 
       return ord;
     });
@@ -284,15 +282,15 @@ router.get('/my-orders', authMiddleware, async (req, res) => {
  *       500:
  *         description: Errore nel recupero delle comande
  */
-router.get('/restaurant-orders', authMiddleware, async (req, res) => {
+router.get('/restaurant-orders', authMiddleware, async (req, res) => { //non richiedo :id perchè l'identità è gia nel token
   try {
     if (req.user.role !== 'restaurant') {
       return res.status(403).json({ message: "Accesso consentito solo ai ristoratori." });
     }
 
-    const orders = await Order.find({ restaurant: req.user.id })
+    const orders = await Order.find({ restaurant: req.user.id })  //cerca tutti gli ordini ricevuti da questo ristorante e li popola
       .populate('customer', 'name surname email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 }); //dal piu recente al meno recente
 
     res.status(200).json(orders);
   } catch (error) {
@@ -343,7 +341,8 @@ router.get('/restaurant-orders', authMiddleware, async (req, res) => {
  *       500:
  *         description: Errore durante l'aggiornamento dello stato
  */
-router.patch('/:id/status', authMiddleware, async (req, res) => {
+router.patch('/:id/status', authMiddleware, async (req, res) => {//patch perchè si modifica solo una parte della risorsa
+  //:id ci dice quale ordine prendiamo in considerazione
   try {
     if (req.user.role !== 'restaurant') {
       return res.status(403).json({ message: "Accesso consentito solo ai ristoratori." });
@@ -352,9 +351,9 @@ router.patch('/:id/status', authMiddleware, async (req, res) => {
     const { status } = req.body;
 
     const updatedOrder = await Order.findOneAndUpdate(
-      { _id: req.params.id, restaurant: req.user.id },
+      { _id: req.params.id, restaurant: req.user.id },  //controlla che il ristorante sia lo stesso dell'ordine
       { $set: { status } },
-      { returnDocument: 'after', runValidators: true }
+      { returnDocument: 'after', runValidators: true } //run validatos fa rispetta il vincolo enum
     );
 
     if (!updatedOrder) {
@@ -398,76 +397,76 @@ router.get('/restaurant-stats', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: "Accesso consentito solo ai ristoratori." });
     }
 
-    const currentRestaurantId = new mongoose.Types.ObjectId(req.user.id);
+    const currentRestaurantId = new mongoose.Types.ObjectId(req.user.id);   //utilizzo di aggregation pipeline di mongoDB, traduce req,user.id in un objectID per il confronto
 
     // 1. Statistiche piatti venduti del proprio locale
-    const dishesStats = await Order.aggregate([
-      { $match: { restaurant: currentRestaurantId, status: 'consegnato' } },
-      { $unwind: '$items' },
+    const dishesStats = await Order.aggregate([ //inzio della pipeline sulla collezione orders
+      { $match: { restaurant: currentRestaurantId, status: 'consegnato' } },  //prendi solo ordine del ristorante attuale che sono gia consegnati
+      { $unwind: '$items' },  //prende l'array di itmes e lo divide
       {
-        $group: {
-          _id: '$items.name',
-          totalQuantitySold: { $sum: '$items.quantity' },
-          totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+        $group: { //raggruppa per criterio
+          _id: '$items.name', //stesso nome
+          totalQuantitySold: { $sum: '$items.quantity' }, //trova la quantità di porzioni vendute
+          totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } } //calcola incasso totale moltiplicando la quantita per il prezzo e sommando il uttto
         }
       },
-      { $sort: { totalQuantitySold: -1 } }
+      { $sort: { totalQuantitySold: -1 } } //sorta in ordine decrescente, dal piu venduto al meno
     ]);
 
     // 2. Incasso totale e ordini conclusi del proprio locale
     const ownSummary = await Order.aggregate([
       { $match: { restaurant: currentRestaurantId, status: 'consegnato' } },
       {
-        $group: {
-          _id: '$restaurant',
-          totalRevenue: { $sum: '$totalAmount' },
-          totalOrdersCompleted: { $sum: 1 }
+        $group: { //raggruppa
+          _id: '$restaurant', //tutti gli ordini dello stesso ristorante
+          totalRevenue: { $sum: '$totalAmount' }, //fa la somma di tutti gli incassi
+          totalOrdersCompleted: { $sum: 1 } //somma tutti gli ordini portati a temine per capire il totale degl ordini
         }
       }
     ]);
 
     // 3. Classifica e Benchmark rispetto a tutti gli altri ristoranti
     const leaderboard = await Order.aggregate([
-      { $match: { status: 'consegnato' } },
+      { $match: { status: 'consegnato' } }, 
       {
-        $group: {
+        $group: { //raggruppa tutti i ristoranti per incassi e comande
           _id: '$restaurant',
           totalRevenue: { $sum: '$totalAmount' },
           totalOrdersCompleted: { $sum: 1 }
         }
       },
       {
-        $lookup: {
+        $lookup: {  //fa una specie di join e trova per ogni id ristorante il nome
           from: 'utente',
           localField: '_id',
           foreignField: '_id',
-          as: 'restaurantDetails'
+          as: 'restaurantDetails' //lo salva vcome restaurant details
         }
       },
-      { $unwind: '$restaurantDetails' },
+      { $unwind: '$restaurantDetails' }, //estrae 
       {
-        $project: {
-          _id: 1,
+        $project: {//riformattaziopne pulita
+          _id: 1, //campi visibili
           restaurantName: '$restaurantDetails.restaurantName',
-          totalRevenue: 1,
-          totalOrdersCompleted: 1,
-          isMyRestaurant: { $eq: ['$_id', currentRestaurantId] }
+          totalRevenue: 1,//campi visibili
+          totalOrdersCompleted: 1,//campi visibili
+          isMyRestaurant: { $eq: ['$_id', currentRestaurantId] }  //true con confronto logico se il ristorante è il tuo
         }
       },
-      { $sort: { totalRevenue: -1 } }
+      { $sort: { totalRevenue: -1 } } //decrescente dal piu grande al piu piccolo
     ]);
 
     // 4. Posizione del proprio locale in classifica
-    const myRankIndex = leaderboard.findIndex(item => item._id.toString() === currentRestaurantId.toString());
-    const myRank = myRankIndex !== -1 ? myRankIndex + 1 : leaderboard.length + 1;
+    const myRankIndex = leaderboard.findIndex(item => item._id.toString() === currentRestaurantId.toString()); //cerca nella leaderboard un itm dove l'id è il tuo stesso id
+    const myRank = myRankIndex !== -1 ? myRankIndex + 1 : leaderboard.length + 1; //se il ristorante non ompare in classfica allora ti psoizioni alla fine della classfica, altrimenti fai +1
 
-    res.status(200).json({
+    res.status(200).json({  //oayload strutturato
       myPerformance: {
         summary: ownSummary.length > 0 ? ownSummary[0] : { totalRevenue: 0, totalOrdersCompleted: 0 },
         dishesSold: dishesStats,
         leaderboardPosition: `${myRank}° su ${leaderboard.length} ristoranti attivi`
       },
-      marketLeaderboard: leaderboard
+      marketLeaderboard: leaderboard  //leaderboard
     });
 
   } catch (error) {
