@@ -33,7 +33,7 @@ window.updateView = function() {
  */
 async function loadRestaurantProfileAndMenu() {
   try {
-    const profileRes = await apiRequest('/auth/me').catch(() => apiRequest('/users/me'));
+    const profileRes = await apiRequest('/auth/me');
     const user = profileRes.user || profileRes;
     
     myRestaurantId = user._id || user.id;

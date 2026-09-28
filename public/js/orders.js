@@ -63,7 +63,7 @@ window.addEventListener('beforeunload', () => {
 
 async function fetchUserProfile() {
   try {
-    const res = await apiRequest('/auth/me').catch(() => apiRequest('/users/me'));
+    const res = await apiRequest('/auth/me');
     if (res && res.user) {
       userProfile = res.user;
     } else if (res) {

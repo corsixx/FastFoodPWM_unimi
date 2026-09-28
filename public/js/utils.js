@@ -191,7 +191,7 @@ window.logout = function() {  //funzione logout che rimuove item da local storag
 // ============================================================================
 // 4. GESTIONE DEL CARRELLO GLOBALE
 // ============================================================================
-window.renderCartBadge = function() { //aggiorna nell'header il contatore
+window.renderCartBadge = function() { //aggiorna nell'header il contatore dei piatti nel carrello
   let cart = JSON.parse(localStorage.getItem('cart')) || []; //prende il carrello e converte in JSON array, se non esiste (tipo primo accesso) allora null
   const count = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);  //reduce riduce un array  a un  numero, calcola la somma aggregata(non conta le righe) di elementi
   //es. ho pizza qty 2 e pasta qty 1 fa 2 + 1 tipo un ciclo, partendo da 0
@@ -205,7 +205,7 @@ window.renderDrawerCartUI = function() {
   const totalQtyEl = document.getElementById('drawer-cart-total-qty');  //pezzi ordinati 
   const subtotalEl = document.getElementById('drawer-cart-subtotal');
   
-  const totalQty = cart.reduce((acc, i) => acc + (i.quantity || 1), 0);
+  const totalQty = cart.reduce((acc, i) => acc + (i.quantity || 1), 0); //trova la quantita dei piatti totale
   const subtotal = cart.reduce((acc, i) => acc + ((Number(i.price) || 0) * (i.quantity || 1)), 0);  //prezzo per quantità
 
   if (totalQtyEl) totalQtyEl.textContent = totalQty;  //aggiorna se esiste
