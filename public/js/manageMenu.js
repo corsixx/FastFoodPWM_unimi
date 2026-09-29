@@ -247,7 +247,7 @@ window.handleAddExistingMeal = async function(mealId) {
   }
 };
 
-window.handleRemoveMealFromMenu = async function(mealId) {
+window.handleRemoveMealFromMenu = async function(mealId) {  //
   const isIt = currentLang === 'IT';
   if (!confirm(isIt ? 'Vuoi rimuovere questo piatto dal tuo menu?' : 'Remove this dish from your menu?')) return;
 
@@ -264,7 +264,7 @@ window.handleRemoveMealFromMenu = async function(mealId) {
   }
 };
 
-window.handleCreateCustomMeal = async function(e) {
+window.handleCreateCustomMeal = async function(e) { //modale per aggiunta piatti riga 125
   e.preventDefault();
 
   const name = document.getElementById('custom-meal-name').value.trim();
@@ -312,7 +312,7 @@ window.handleCreateCustomMeal = async function(e) {
   }
 };
 
-window.handleDeleteAllMyMeals = async function() {
+window.handleDeleteAllMyMeals = async function() {  //svuota tutto il listino riga 39
   const isIt = currentLang === 'IT';
   if (myMeals.length === 0) return;
 
@@ -329,7 +329,7 @@ window.handleDeleteAllMyMeals = async function() {
   }
 };
 
-window.handleSearchMyMeals = function(e) {
+window.handleSearchMyMeals = function(e) {  //filtro di ricerca sul menu proprio riga 71
   const q = e.target.value.toLowerCase().trim();
   filteredMyMeals = myMeals.filter(m => {
     const name = (m.strMeal || '').toLowerCase();
@@ -339,7 +339,7 @@ window.handleSearchMyMeals = function(e) {
   renderMyMeals();
 };
 
-window.handleSearchCatalogMeals = function(e) {
+window.handleSearchCatalogMeals = function(e) { //cerca sul catalogo riga 91
   const q = e.target.value.toLowerCase().trim();
   filteredGlobalMeals = allGlobalMeals.filter(m => {
     const name = (m.strMeal || '').toLowerCase();
