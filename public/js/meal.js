@@ -7,39 +7,39 @@ let selectedQty = 1;
 
 // Avvio dopo che utils.js ha iniettato componenti e traduzioni
 document.addEventListener('componentsLoaded', async () => {
-  await loadMealDetails();
+  await loadMealDetails();  //caricamento dei dettagli paitto
 });
 
 // Chiamato da toggleLanguage() in utils.js
 window.updateView = function() {
-  const backText = document.getElementById('txt-back-catalog');
+  const backText = document.getElementById('txt-back-catalog'); //tasto pe rtoranre al catalogo riga 25
   if (backText) {
-    backText.textContent = currentLang === 'IT' ? 'Torna al Menu Completo' : 'Back to Full Menu';
+    backText.textContent = currentLang === 'IT' ? 'Torna al Menu Completo' : 'Back to Full Menu'; //cambia linugaq
   }
-  if (currentMeal) renderMealView();
+  if (currentMeal) renderMealView();  //riga 52 se il piatto ce
 };
 
 /**
  * Caricamento dati piatto dal backend
  */
 async function loadMealDetails() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const mealId = urlParams.get('id');
-  const queryRestId = urlParams.get('restaurantId');
+  const urlParams = new URLSearchParams(window.location.search);  //legge i parametri del browser dopo ?
+  const mealId = urlParams.get('id');  //estrae l'id es ?id=12345
+  const queryRestId = urlParams.get('restaurantId');  //controlla se è stato passato un ristorante
 
   if (!mealId) {
-    renderNotFound();
+    renderNotFound(); //2riga 298
     return;
   }
 
   try {
-    const data = await apiRequest(`/meals/${mealId}`);
+    const data = await apiRequest(`/meals/${mealId}`); //get del piatto specifico
     if (!data) throw new Error('Piatto non trovato');
 
     currentMeal = data;
-    if (queryRestId) selectedRestaurantId = queryRestId;
+    if (queryRestId) selectedRestaurantId = queryRestId;  //se nella query ce un ristorante lo mette come ristorante selezionato
 
-    renderMealView();
+    renderMealView(); //rendirizza la scheda piatto riga 52
   } catch (err) {
     console.error('Errore caricamento scheda piatto:', err);
     renderNotFound();
@@ -50,7 +50,7 @@ async function loadMealDetails() {
  * Renderizza la scheda piatto
  */
 function renderMealView() {
-  const container = document.getElementById('meal-detail-container');
+  const container = document.getElementById('meal-detail-container'); //riga 30
   if (!container || !currentMeal) return;
 
   const isIt = currentLang === 'IT';
@@ -64,25 +64,25 @@ function renderMealView() {
   const prepTime = currentMeal.preparationTime || 15;
   const desc = currentMeal.description || currentMeal.strInstructions || (isIt ? 'Piatto preparato fresco con ingredienti selezionati.' : 'Freshly prepared dish with selected ingredients.');
 
-  let ingrText = isIt ? 'Ingredienti freschi di stagione.' : 'Fresh seasonal ingredients.';
-  if (Array.isArray(currentMeal.ingredients) && currentMeal.ingredients.length > 0) {
+  let ingrText = isIt ? 'Ingredienti freschi di stagione.' : 'Fresh seasonal ingredients.'; //ingredienti
+  if (Array.isArray(currentMeal.ingredients) && currentMeal.ingredients.length > 0) { //se ingredienti è array allora li unisce separati da virgola
     ingrText = currentMeal.ingredients.join(', ');
   } else if (typeof currentMeal.ingredients === 'string' && currentMeal.ingredients.trim()) {
     ingrText = currentMeal.ingredients;
   }
 
   // Lista ristoranti associati
-  const available = Array.isArray(currentMeal.availableRestaurants) ? currentMeal.availableRestaurants : [];
-  let restaurantBox = '';
-  const canOrder = available.length > 0;
+  const available = Array.isArray(currentMeal.availableRestaurants) ? currentMeal.availableRestaurants : [];  //controlla se il piatto ha dei ristoranti associati o comunque ha un array valido
+  let restaurantBox = ''; //blocco dei locali
+  const canOrder = available.length > 0;  
 
   if (canOrder) {
-    if (!selectedRestaurantId) {
-      selectedRestaurantId = available[0]._id;
+    if (!selectedRestaurantId) {  //quello che cera nella query nell'url
+      selectedRestaurantId = available[0]._id;  //seleziona il primo  nella listaa
       selectedRestaurantName = available[0].name || available[0].restaurantName || 'Ristorante Partner';
     }
 
-    if (isRestaurant) {
+    if (isRestaurant) { //se sei ristoratore non puoi ordinare , crea delle box con tutti i ristoratori che hanno quel piatto
       // VISTA RISTORATORE: Lista informativa di sola lettura senza select interattivo
       restaurantBox = `
         <div class="border border-dark p-3 bg-light mb-4">
@@ -99,7 +99,7 @@ function renderMealView() {
           </ul>
         </div>
       `;
-    } else if (available.length === 1) {
+    } else if (available.length === 1) {  //se il ristorante è solo 1 non mostra una tendina ma solo 1 ristorante selezionabile
       restaurantBox = `
         <div class="border border-dark p-3 bg-white mb-4">
           <div class="small text-muted text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">
@@ -113,13 +113,13 @@ function renderMealView() {
           </div>
         </div>
       `;
-    } else {
+    } else {  //2 o piu ristoranti, menu a tendiana con select interattivo, quando premi o comnunque all'evcento on change allora metti uan handleSelectRestaurnt riga 239
       restaurantBox = `
         <div class="border border-dark p-3 bg-white mb-4">
           <label class="form-label small text-muted text-uppercase fw-bold mb-2" style="font-size: 0.7rem;">
             <i class="bi bi-shop me-1"></i> ${isIt ? 'SCEGLI IL PUNTO DI RITIRO' : 'CHOOSE PICKUP LOCATION'}
           </label>
-          <select class="form-select rounded-0 border-dark shadow-none" id="select-pickup-restaurant" onchange="handleSelectRestaurant(event)">
+          <select class="form-select rounded-0 border-dark shadow-none" id="select-pickup-restaurant" onchange="handleSelectRestaurant(event)"> 
             ${available.map(r => `
               <option value="${r._id}" data-name="${(r.name || r.restaurantName).replace(/'/g, "\\'")}" ${String(r._id) === String(selectedRestaurantId) ? 'selected' : ''}>
                 ${(r.name || r.restaurantName).toUpperCase()} &bull; ${r.address || r.restaurantAddress || 'Sede'}
@@ -129,7 +129,7 @@ function renderMealView() {
         </div>
       `;
     }
-  } else {
+  } else {  //se nessuno offre il piatto box grigio con scritto nodispo
     restaurantBox = `
       <div class="border border-dark p-3 bg-light mb-4">
         <div class="fw-bold text-uppercase text-danger mb-1" style="font-family: 'Space Grotesk', sans-serif;">
@@ -144,7 +144,7 @@ function renderMealView() {
 
   // Barra di acquisto o box informativo gestionale
   let actionBox = '';
-  if (isRestaurant) {
+  if (isRestaurant) { //barra al posto che aggiugni al carrelllo mette uin banner con area gestionale e un tasto per toranre al catalgo
     actionBox = `
       <div class="border-top pt-4 mt-auto">
         <div class="border border-dark p-3 bg-light d-flex justify-content-between align-items-center">
@@ -162,11 +162,11 @@ function renderMealView() {
         </div>
       </div>
     `;
-  } else if (canOrder) {
+  } else if (canOrder) {  //se cliente normale e piatto disponibile genera uns elettore di quantita E aggiungi al carrello
     actionBox = `
       <div class="border-top pt-4 mt-auto d-flex gap-2 align-items-stretch" style="height: 75px;">
         <div class="d-flex align-items-center border border-dark bg-white">
-          <button type="button" class="btn btn-light rounded-0 px-3 h-100 fw-bold border-0" onclick="changeQty(-1)">-</button>
+          <button type="button" class="btn btn-light rounded-0 px-3 h-100 fw-bold border-0" onclick="changeQty(-1)">-</button>  <!--selettore di quantita-->
           <span class="px-3 fw-bold font-monospace fs-5" id="meal-qty-display">${selectedQty}</span>
           <button type="button" class="btn btn-light rounded-0 px-3 h-100 fw-bold border-0" onclick="changeQty(1)">+</button>
         </div>
@@ -234,42 +234,43 @@ function renderMealView() {
       </div>
     </div>
   `;
-}
+} //crea 2 colonne con tutti i box
 
-window.handleSelectRestaurant = function(e) {
-  selectedRestaurantId = e.target.value;
-  const opt = e.target.options[e.target.selectedIndex];
-  selectedRestaurantName = opt.getAttribute('data-name') || 'Ristorante Partner';
+window.handleSelectRestaurant = function(e) { //usata dentro restaurantbox 122
+  selectedRestaurantId = e.target.value;  //elemento select che catena l'evcento, ne estrae il valore
+  const opt = e.target.options[e.target.selectedIndex];   //prende l'indice dell'opzione slezionata, poi prende l'elemento fisico e lo salva
+  selectedRestaurantName = opt.getAttribute('data-name') || 'Ristorante Partner'; //legge il nome e lo salva
 };
 
-window.changeQty = function(delta) {
-  selectedQty += delta;
-  if (selectedQty < 1) selectedQty = 1;
-  renderMealView();
+window.changeQty = function(delta) {  //delta rappresenta la variazione numerica 
+  selectedQty += delta; //aumenti o diminuisci
+  if (selectedQty < 1) selectedQty = 1; 
+  renderMealView();  //ricarica la vista del paitto
 };
 
-window.addToCart = function() {
-  if (!currentMeal) return;
+window.addToCart = function() { //funzione per aggiugnere al carrelo riga 174
+  if (!currentMeal) return; 
 
   const userRole = localStorage.getItem('userRole');
   if (userRole === 'restaurant') return;
 
   const isIt = currentLang === 'IT';
 
-  if (!selectedRestaurantId) {
+  if (!selectedRestaurantId) {  //se non si ha ancopra scelto da che ristorante ordinare
     alert(isIt ? 'Seleziona un ristorante per il ritiro prima di continuare.' : 'Please select a pickup restaurant before proceeding.');
     return;
   }
 
-  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  const mealId = String(currentMeal._id || currentMeal.idMeal || currentMeal.id);
+  let cart = JSON.parse(localStorage.getItem('cart') || '[]');  //concerte in array il carrello 
+  const mealId = String(currentMeal._id || currentMeal.idMeal || currentMeal.id); //normalizza id
   const priceNum = (typeof currentMeal.price === 'number' && currentMeal.price > 0) ? currentMeal.price : (parseFloat(currentMeal.price) || 8.50);
+  //validazione prezzo
 
-  const existing = cart.find(i => String(i.id) === mealId && String(i.restaurantId) === String(selectedRestaurantId));
+  const existing = cart.find(i => String(i.id) === mealId && String(i.restaurantId) === String(selectedRestaurantId));  //controlla nel carrello se esiste un piatto uguale
 
   if (existing) {
     existing.quantity += selectedQty;
-  } else {
+  } else {  //fa push nel carrello
     cart.push({
       id: mealId,
       name: currentMeal.strMeal,
@@ -282,21 +283,21 @@ window.addToCart = function() {
     });
   }
 
-  localStorage.setItem('cart', JSON.stringify(cart));
+  localStorage.setItem('cart', JSON.stringify(cart)) ;  //lo rimanda in localstoraga
   
   // Aggiorna il carrello globale definito in utils.js
-  if (typeof renderCartBadge === 'function') renderCartBadge();
-  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI();
+  if (typeof renderCartBadge === 'function') renderCartBadge(); //per aggiornare il numerino
+  if (typeof renderDrawerCartUI === 'function') renderDrawerCartUI(); //per aggiornare il drawer
 
   // Apre il carrello laterale
   const cartDrawerEl = document.getElementById('cartOffcanvas');
   if (cartDrawerEl) {
-    bootstrap.Offcanvas.getOrCreateInstance(cartDrawerEl).show();
+    bootstrap.Offcanvas.getOrCreateInstance(cartDrawerEl).show(); //o prende o crea l'istanza del carrello laterale
   }
 };
 
-function renderNotFound() {
-  const container = document.getElementById('meal-detail-container');
+function renderNotFound() { //se non riesce a fare il rendere 
+  const container = document.getElementById('meal-detail-container'); //seleziona il caontainer principale della scehda prodotto se non ce fa return
   if (!container) return;
 
   const isIt = currentLang === 'IT';
@@ -311,5 +312,5 @@ function renderNotFound() {
         </a>
       </div>
     </div>
-  `;
+  `;  //riqaudro errore sull'intera apagina
 }
