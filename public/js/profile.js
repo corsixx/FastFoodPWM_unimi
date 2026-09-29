@@ -245,13 +245,18 @@ async function handleProfileUpdate(e) {
  * Cambio Password (PUT /api/auth/password - ora esiste anche lato backend)
  */
 async function handlePasswordUpdate(e) {
-  e.preventDefault();
+  e.preventDefault(); //blocca il comportamento di base del browser di ricaricare la pagina ecc
 
   const alertBox = document.getElementById('pwd-alert');
   const submitBtn = document.getElementById('btn-save-pwd');
   const currentPassword = document.getElementById('currentPassword').value;
   const newPassword = document.getElementById('newPassword').value;
   const t = i18n[currentLang];
+
+  if (!currentPassword) { //cotntrolla se la passwword è vuota
+    showAlert(alertBox, t.errCurrentPwdRequired || "Inserisci la password attuale.", 'danger');
+    return;
+  }
 
   if (newPassword.length < 6) {
     showAlert(alertBox, t.errPwdMismatchLen, 'danger');
@@ -262,7 +267,7 @@ async function handlePasswordUpdate(e) {
   submitBtn.textContent = t.btnSavingPwd;
 
   try {
-    await apiRequest('/auth/password', 'PUT', { currentPassword, newPassword });
+    await apiRequest('/auth/password', 'PUT', { currentPassword, newPassword });  //richiesta di update della password
     showAlert(alertBox, t.successPwd, 'success');
     document.getElementById('password-form').reset();
   } catch (err) {
@@ -278,11 +283,11 @@ async function handlePasswordUpdate(e) {
  * Mostra/nasconde la password digitata nei campi
  */
 function togglePasswordVisibility(inputId, iconId) {
-  const pwdInput = document.getElementById(inputId);
-  const icon = document.getElementById(iconId);
+  const pwdInput = document.getElementById(inputId);  //prende la barra input password
+  const icon = document.getElementById(iconId); //prende l'icona
   if (!pwdInput || !icon) return;
 
-  if (pwdInput.type === 'password') {
+  if (pwdInput.type === 'password') { //se è a pallini replace con la password e poi apri gli occhi
     pwdInput.type = 'text';
     icon.classList.replace('bi-eye', 'bi-eye-slash');
   } else {
@@ -298,11 +303,11 @@ function togglePasswordVisibility(inputId, iconId) {
 /**
  * Passo 1: mostra il box di conferma testuale
  */
-function showDeleteConfirmation() {
+function showDeleteConfirmation() { //apertura zona di sicurezza
   document.getElementById('delete-confirm-box').classList.remove('d-none');
-  document.getElementById('btn-delete-account-start').classList.add('d-none');
-  document.getElementById('delete-confirm-input').value = '';
-  document.getElementById('delete-confirm-input').focus();
+  document.getElementById('btn-delete-account-start').classList.add('d-none');  //rende nnon visibile il pulsante rossa copn scritto elimina il mio account
+  document.getElementById('delete-confirm-input').value = ''; //svuota il campo da valori precxdenti
+  document.getElementById('delete-confirm-input').focus();  //posiziona il cursore all'interno del blocco
 }
 
 /**
@@ -311,8 +316,8 @@ function showDeleteConfirmation() {
 function hideDeleteConfirmation() {
   document.getElementById('delete-confirm-box').classList.add('d-none');
   document.getElementById('btn-delete-account-start').classList.remove('d-none');
-  const alertBox = document.getElementById('delete-alert');
-  if (alertBox) alertBox.classList.add('d-none');
+  const alertBox = document.getElementById('delete-alert'); //riga 147
+  if (alertBox) alertBox.classList.add('d-none'); //se cera alert attivo lo toglie
 }
 
 /**
@@ -322,24 +327,24 @@ function hideDeleteConfirmation() {
 async function handleDeleteAccount() {
   const alertBox = document.getElementById('delete-alert');
   const t = i18n[currentLang];
-  const confirmInput = document.getElementById('delete-confirm-input').value.trim();
+  const confirmInput = document.getElementById('delete-confirm-input').value.trim();  //RIGA 159 box dove scrivere
   const expectedWord = currentLang === 'IT' ? 'ELIMINA' : 'DELETE';
 
-  if (confirmInput.toUpperCase() !== expectedWord) {
+  if (confirmInput.toUpperCase() !== expectedWord) {  //digitare elimina per confermare
     showAlert(alertBox, t.errDeleteConfirmText, 'danger');
     return;
   }
 
-  const confirmBtn = document.getElementById('btn-delete-account-confirm');
-  confirmBtn.disabled = true;
+  const confirmBtn = document.getElementById('btn-delete-account-confirm'); //tasto per confermare
+  confirmBtn.disabled = true; //disabilita il pulsante durtante l'attesa
 
   try {
-    await apiRequest('/auth/me', 'DELETE');
-    showAlert(alertBox, t.accountDeleted, 'success');
+    await apiRequest('/auth/me', 'DELETE'); //chiama la delete
+    showAlert(alertBox, t.accountDeleted, 'success'); 
 
     setTimeout(() => {
-      localStorage.clear();
-      window.location.href = 'index.html';
+      localStorage.clear(); //pulisce la local storage
+      window.location.href = 'index.html';  //ti porta alla pagina pricniaple
     }, 1500);
 
   } catch (err) {
