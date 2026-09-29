@@ -35,13 +35,24 @@
 
         <form id="profile-form" onsubmit="handleProfileUpdate(event)">
           <div class="mb-3">
-            <label for="name" class="form-label small fw-bold text-uppercase" id="lbl-name">Nome Completo / Referente</label>
+            <label for="name" class="form-label small fw-bold text-uppercase" id="lbl-name">Nome / Referente</label>
             <input type="text" class="form-control rounded-0 border-dark shadow-none" id="name" required>
           </div>
 
           <div class="mb-3">
+            <label for="surname" class="form-label small fw-bold text-uppercase" id="lbl-name">Cognome</label>
+            <input type="text" class="form-control rounded-0 border-dark shadow-none" id="surname" required>
+          </div>
+
+          <div class="mb-3">
             <label for="email" class="form-label small fw-bold text-uppercase" id="lbl-email">Indirizzo Email</label>
-            <input type="email" class="form-control rounded-0 border-dark shadow-none" id="email" required>
+            <input 
+              type="email" 
+              class="form-control rounded-0 border-dark shadow-none bg-light text-muted" 
+              id="email" 
+              readonly
+            >
+            <div class="form-text small text-muted">L'indirizzo email non può essere modificato.</div>
           </div>
 
           <!-- Solo Clienti: preferenza cucina + metodo di pagamento -->

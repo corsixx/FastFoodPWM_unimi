@@ -68,6 +68,7 @@ const i18n = {
 document.addEventListener('componentsLoaded', async () => {
   renderRegisterLanguageUI(); //per cambiare lingua
   await loadFavoriteCategories(); //per caricare le categorie pref dall'utente
+  renderDrawerAuth()
 });
 
 /**
@@ -94,7 +95,12 @@ async function loadFavoriteCategories() {
     // Se la chiamata fallisce, la select resta con la sola opzione "Nessuna preferenza"
   }
 }
-
+function toggleLanguage() {
+  currentLang = (currentLang === 'IT') ? 'EN' : 'IT'; 
+  localStorage.setItem('appLang', currentLang); //setta sulla local storage la lingua attuale
+  renderLanguageUI();
+  renderDrawerAuth();
+}
 /**
  * Applica le traduzioni specifiche di questa pagina.
  * Le traduzioni comuni (header, footer, drawer) sono già gestite da utils.js.

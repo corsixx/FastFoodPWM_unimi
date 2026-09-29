@@ -71,15 +71,15 @@ const i18n = {
 // AVVIO: aspetta che utils.js abbia iniettato header/footer/drawer
 // ============================================================================
 document.addEventListener('componentsLoaded', async () => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token');  //serve perchè devi essere loggato
   if (!token) {
     window.location.href = 'login.html';
     return;
   }
 
-  renderProfileLanguageUI();
-  await loadFavoriteCategories();
-  await loadUserProfile();
+  renderProfileLanguageUI();  //caricamente lingua
+  await loadFavoriteCategories(); //caricamento tendina con preferiti
+  await loadUserProfile();  //caricamento utente
 });
 
 /**
@@ -120,17 +120,17 @@ function renderProfileLanguageUI() {
  * Recupera le categorie reali dal backend e popola la select preferenze.
  */
 async function loadFavoriteCategories() {
-  const select = document.getElementById('favoriteCategory');
+  const select = document.getElementById('favoriteCategory'); //riga 49 e 50
   if (!select) return;
 
   try {
-    const categories = await apiRequest('/meals/categories');
-    if (Array.isArray(categories)) {
-      categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat;
+    const categories = await apiRequest('/meals/categories'); //rotta get per le categorie
+    if (Array.isArray(categories)) { 
+      categories.forEach(cat => { //per ogni categoria
+        const option = document.createElement('option');  //crea elemento da appendere
+        option.value = cat; 
         option.textContent = cat;
-        select.appendChild(option);
+        select.appendChild(option); //appende il figlio in fondo alla select
       });
     }
   } catch (err) {
@@ -142,31 +142,32 @@ async function loadFavoriteCategories() {
  * Caricamento Profilo da Backend (GET /api/auth/me)
  */
 async function loadUserProfile() {
-  const alertBox = document.getElementById('profile-alert');
-  const t = i18n[currentLang];
+  const alertBox = document.getElementById('profile-alert');  //riga 34 caricamento della alert box
+  const t = i18n[currentLang];  //caricamento dizionario in t
 
   try {
-    const userData = await apiRequest('/auth/me');
+    const userData = await apiRequest('/auth/me');  //get auth/me 
     if (!userData) throw new Error(t.errLoad);
 
-    currentUserRole = userData.role || 'customer';
-    const roleBadge = document.getElementById('user-role-badge');
-    if (roleBadge) roleBadge.textContent = currentUserRole.toUpperCase();
+    currentUserRole = userData.role || 'customer';  //fallback customer
+    const roleBadge = document.getElementById('user-role-badge'); //riga 31 per il badge del ruolo
+    if (roleBadge) roleBadge.textContent = currentUserRole.toUpperCase(); //carica il tuo ruolo nel badge
 
-    document.getElementById('name').value = userData.name || '';
-    document.getElementById('email').value = userData.email || '';
+    document.getElementById('name').value = userData.name || '';  //riga 37 38
+    document.getElementById('surname').value = userData.surname || '';  //riga 37 38
+    document.getElementById('email').value = userData.email || '';  //riga 43 44
 
-    const custFields = document.getElementById('customer-profile-fields');
-    const restFields = document.getElementById('restaurant-profile-fields');
+    const custFields = document.getElementById('customer-profile-fields');  //riga 48
+    const restFields = document.getElementById('restaurant-profile-fields');  //riga 64
 
-    if (currentUserRole === 'restaurant') {
+    if (currentUserRole === 'restaurant') { //aggiunge i dati nei campi per irstoratori
       if (restFields) restFields.classList.remove('d-none');
       if (custFields) custFields.classList.add('d-none');
       document.getElementById('restaurantName').value = userData.restaurantName || '';
       document.getElementById('restaurantAddress').value = userData.restaurantAddress || '';
       document.getElementById('restaurantPhone').value = userData.restaurantPhone || '';
       document.getElementById('IVAnumber').value = userData.IVAnumber || '';
-    } else {
+    } else {  //campi per customer
       if (custFields) custFields.classList.remove('d-none');
       if (restFields) restFields.classList.add('d-none');
       document.getElementById('favoriteCategory').value = userData.favoriteCategory || '';
@@ -184,45 +185,59 @@ async function loadUserProfile() {
  * Salvataggio Profilo (PUT /api/auth/me - endpoint corretto)
  */
 async function handleProfileUpdate(e) {
-  e.preventDefault();
+  e.preventDefault(); //blocca il comportamento di base del browser di ricaricare la pagina ecc
 
-  const alertBox = document.getElementById('profile-alert');
-  const submitBtn = document.getElementById('btn-save-profile');
+  const alertBox = document.getElementById('profile-alert');  //riga 34
+  const submitBtn = document.getElementById('btn-save-profile');  //riga 86
   const t = i18n[currentLang];
 
-  const payload = {
-    name: document.getElementById('name').value.trim()
-  };
+  // Recupero gli input comuni
+  const nameInput = document.getElementById('name');
+  const surnameInput = document.getElementById('surname');
 
+  const payload = {
+    name: nameInput ? nameInput.value.trim() : '',
+    surname: surnameInput ? surnameInput.value.trim() : ''
+  };  //crea oggetto payload che contiene il campo nome pulito dagli spazi 
+
+  //salva le info principali nel payload a seconda dell'utente
   if (currentUserRole === 'restaurant') {
-    payload.restaurantName = document.getElementById('restaurantName').value.trim();
-    payload.restaurantAddress = document.getElementById('restaurantAddress').value.trim();
-    payload.restaurantPhone = document.getElementById('restaurantPhone').value.trim();
-    payload.IVAnumber = document.getElementById('IVAnumber').value.trim();
-  } else {
-    payload.favoriteCategory = document.getElementById('favoriteCategory').value;
-    payload.paymentMethod = document.getElementById('paymentMethod').value;
+    const restName = document.getElementById('restaurantName');
+    const restAddr = document.getElementById('restaurantAddress');
+    const restPhone = document.getElementById('restaurantPhone');
+    const ivaNum = document.getElementById('IVAnumber');
+
+    if (restName) payload.restaurantName = restName.value.trim();
+    if (restAddr) payload.restaurantAddress = restAddr.value.trim();
+    if (restPhone) payload.restaurantPhone = restPhone.value.trim();
+    if (ivaNum) payload.IVAnumber = ivaNum.value.trim();
+  } else {  
+    const favCat = document.getElementById('favoriteCategory');
+    const payMethod = document.getElementById('paymentMethod');
+
+    if (favCat) payload.favoriteCategory = favCat.value;
+    if (payMethod) payload.paymentMethod = payMethod.value;
   }
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = t.btnSaving;
+  submitBtn.disabled = true;  //disattiva bottone per gli aggiornamenti per evitare errori accidentali
+  submitBtn.textContent = t.btnSaving;  //testo caricato
 
   try {
-    // Endpoint corretto: PUT /auth/me (prima puntava erroneamente a /auth/profile)
-    await apiRequest('/auth/me', 'PUT', payload);
+    // Endpoint corretto: PUT /auth/me
+    await apiRequest('/auth/me', 'PUT', payload); //manda il put con i nuovi campi
 
-    localStorage.setItem('userName', payload.name);
+    localStorage.setItem('userName', payload.name); //aggiorna la memoria persistente con il nuovo ed eventuale nella local storage il nome e il nmome ristorante se esiste
     if (payload.restaurantName) localStorage.setItem('restaurantName', payload.restaurantName);
 
     showAlert(alertBox, t.successProfile, 'success');
-    renderDrawerAuth();
+    renderDrawerAuth(); //caricamento barra laterale
 
   } catch (err) {
     console.error('Errore salvataggio profilo:', err);
     showAlert(alertBox, err.message || t.errSave, 'danger');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = t.btnSaveProfile;
+  } finally { //eseguito sempre 
+    submitBtn.disabled = false; //riabilita il tasto
+    submitBtn.textContent = t.btnSaveProfile; //cambio testo
   }
 }
 

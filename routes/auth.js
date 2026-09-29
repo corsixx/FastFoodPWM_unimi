@@ -326,33 +326,32 @@ router.get('/me', authMiddleware, async (req, res) => {
  */
 router.put('/me', authMiddleware, async (req, res) => {
   try {
-    const { 
-      name, 
-      surname, 
-      favoriteCategory, 
-      paymentMethod, 
-      restaurantName, 
-      restaurantAddress, 
-      restaurantPhone, 
-      IVAnumber 
-    } = req.body; //i cammpi nel req.body estratti sono i dati che il client ha aggiornato e inviato al server
-    //al massimo quelli che  il client non ha aggiornato sono gli stessi valori già presenti nel database, quindi non ci sono problemi a sovrascrivere i campi con gli stessi valori
-
+    // 1. Whitelist dei campi che è permesso modificare
+    const allowedUpdates = [
+      'name', 
+      'surname', 
+      'favoriteCategory', 
+      'paymentMethod', 
+      'restaurantName', 
+      'restaurantAddress', 
+      'restaurantPhone', 
+      'IVAnumber'
+    ];
+    // 2. Popola solo le chiavi effettivamente presenti nel body
+    const updateData = {};
+    for (const key of allowedUpdates) {
+      if (req.body[key] !== undefined) {  //se un certo parametro è diverso da undefined allora lo aggiorni
+        updateData[key] = req.body[key];
+      }
+    }
+    // Se il client non ha mandato campi validi
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "Nessun dato fornito per l'aggiornamento." });
+    }
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
-      { 
-        $set: { 
-          name, 
-          surname, 
-          favoriteCategory, 
-          paymentMethod, 
-          restaurantName, 
-          restaurantAddress, 
-          restaurantPhone, 
-          IVAnumber 
-        } 
-      },
-      { returnDocument: 'after', runValidators: true }  //ritorna il documento aggiornato e applica le validazioni definite nello schema Mongoose
+      { $set: updateData },
+      { returnDocument: 'after', runValidators: true } //ritorna il documento aggiornato e applica le validazioni definite nello schema Mongoose
     ).select('-password');
 
     if (!updatedUser) {
