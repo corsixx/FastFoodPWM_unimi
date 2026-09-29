@@ -1,7 +1,6 @@
 // public/js/restaurantCatalog.js
 
 let allRestaurants = [];
-let filteredRestaurants = [];
 let currentPage = 1;
 const itemsPerPage = 6; // Mostra 6 card grandi per pagina (3 righe da 2)
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80';
@@ -92,7 +91,6 @@ async function loadRestaurantsData() {
       };
     });
 
-    filteredRestaurants = [...allRestaurants];
     currentPage = 1;
     renderGrid();
   } catch (err) {
@@ -115,10 +113,10 @@ function renderGrid() {
   const isIt = currentLang === 'IT';
 
   if (countEl) {
-    countEl.textContent = `${filteredRestaurants.length} ${isIt ? 'locali disponibili' : 'restaurants available'}`;
+    countEl.textContent = `${allRestaurants.length} ${isIt ? 'locali disponibili' : 'restaurants available'}`;
   }
 
-  if (filteredRestaurants.length === 0) {
+  if (allRestaurants.length === 0) {
     grid.innerHTML = `
       <div class="col-12 text-center py-5 border border-dark bg-white">
         <i class="bi bi-shop-window fs-1 text-muted mb-2 d-block"></i>
@@ -130,12 +128,12 @@ function renderGrid() {
     return;
   }
 
-  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
+  const totalPages = Math.ceil(allRestaurants.length / itemsPerPage);
   if (currentPage > totalPages) currentPage = totalPages;
   if (currentPage < 1) currentPage = 1;
 
   const startIdx = (currentPage - 1) * itemsPerPage;
-  const pageItems = filteredRestaurants.slice(startIdx, startIdx + itemsPerPage);
+  const pageItems = allRestaurants.slice(startIdx, startIdx + itemsPerPage);
 
   // Layout a card grandi (2 colonne su desktop)
   grid.innerHTML = pageItems.map(rest => {
@@ -227,22 +225,9 @@ function renderPagination(totalPages) {
 }
 
 window.goToPage = function(page) {
-  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
+  const totalPages = Math.ceil(allRestaurants.length / itemsPerPage);
   if (page < 1 || page > totalPages) return;
   currentPage = page;
   renderGrid();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-window.handleSearch = function(query) {
-  const term = query.trim().toLowerCase();
-  filteredRestaurants = allRestaurants.filter(r => {
-    const name = (r.restaurantName || r.name || '').toLowerCase();
-    const address = (r.restaurantAddress || r.address || '').toLowerCase();
-    const category = (r.favoriteCategory || r.cuisine || '').toLowerCase();
-    const dish = (r.topDishName || '').toLowerCase();
-    return name.includes(term) || address.includes(term) || category.includes(term) || dish.includes(term);
-  });
-  currentPage = 1;
-  renderGrid();
 };
