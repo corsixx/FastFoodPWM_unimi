@@ -171,7 +171,7 @@ function renderMyMeals() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('');  //tasto per rimuovere dal listino
 }
 
 /**
@@ -232,7 +232,7 @@ function renderGlobalCatalog() {
 /**
  * 5. Azioni Operative (Add Existing, Create Custom, Remove)
  */
-window.handleAddExistingMeal = async function(mealId) {
+window.handleAddExistingMeal = async function(mealId) { //aggiunge paitto esiste al menu ristoratore riga 221
   try {
     const res = await apiRequest('/restaurants/menu/add-existing', {
       method: 'POST',
@@ -247,7 +247,7 @@ window.handleAddExistingMeal = async function(mealId) {
   }
 };
 
-window.handleRemoveMealFromMenu = async function(mealId) {  //
+window.handleRemoveMealFromMenu = async function(mealId) {  //riga 167 in questo file, serve per rimuovere il piatto dal menu
   const isIt = currentLang === 'IT';
   if (!confirm(isIt ? 'Vuoi rimuovere questo piatto dal tuo menu?' : 'Remove this dish from your menu?')) return;
 

@@ -57,7 +57,7 @@ const swaggerOptions = {
   apis: ['./routes/auth.js', './routes/meals.js', './routes/restaurants.js', './routes/orders.js'], // Percorsi dei file contenenti le annotazioni Swagger
 };
 
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
+const swaggerDocs = swaggerJsDoc(swaggerOptions); //lettore automatico dei commenti
 
 // Endpoint interfaccia grafica Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
