@@ -289,7 +289,7 @@ window.promptRestaurantSelection = function(mealId) { //funzione usata prima qua
   //tutta la funzione prepara il modale e quaesto utlimo pezzo lo apre
 };
 
-window.confirmAddToCartWithRestaurant = function(restId, restName) {
+window.confirmAddToCartWithRestaurant = function(restId, restName) {  //aggiunge al carrello
   const role = localStorage.getItem('userRole');
   if (role === 'restaurant' || !selectedMealForCart) return;  //se non ce nessun piatto selezionato da mettere nel carrello
 

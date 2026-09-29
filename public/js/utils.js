@@ -108,9 +108,9 @@ window.toggleLanguage = function() {  //funzione assegnata all'oggetto globale w
   renderDrawerCartUI(); //carrello
 
   //controlla se la specifica funzione esiste prima di invocarla
-  if (typeof updateView === 'function') updateView();
-  if (typeof renderMealsGrid === 'function') renderMealsGrid();
-  if (typeof renderMenuGrid === 'function') renderMenuGrid();
+  if (typeof updateView === 'function') updateView(); //nel file catalog
+  if (typeof renderMealsGrid === 'function') renderMealsGrid(); //nel file catalog
+  if (typeof renderMenuGrid === 'function') renderMenuGrid(); //nel file crestaurant daetai
 };
 
 window.renderGlobalLanguageUI = function() {  //funzione che applica le traduzuioni
